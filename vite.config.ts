@@ -60,7 +60,7 @@ export default ({ command, mode }: ConfigEnv): UserConfig => {
       proxy: createProxy(VITE_PROXY),
     },
     build: {
-      target: 'es2015',
+      target: 'es2020',
       outDir: OUTPUT_DIR,
       terserOptions: {
         compress: {
