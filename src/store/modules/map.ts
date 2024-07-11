@@ -37,7 +37,7 @@ class Drawer {
 
   GetDraw(type: string, style?: Style) {
     if (this.draw) {
-      this.drawLayer.getSource().clear();
+      this.drawlayer.getSource().clear();
       this.map.removeInteraction(this.draw);
     }
     this.draw = new Draw({
@@ -80,15 +80,19 @@ export const useMapStore = defineStore({
       });
       const map = new Map({
         view: new View({
-          center: [120.57651, 31.2487],
+          center: [121.505891, 31.238039],
           projection: 'EPSG:4326',
           zoom: 13,
         }),
         layers: [gaodeMapLayer],
         target: container,
+        controls: [],
       });
       this.map = map;
       this.drawerHandler = new Drawer(map);
+    },
+    GetDraw(type: string, style?: Style) {
+      return this.drawerHandler.GetDraw(type, style);
     },
   },
 });
