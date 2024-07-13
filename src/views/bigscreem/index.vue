@@ -19,32 +19,37 @@
         </div>
       </div>
     </div>
-    <div class="left" v-if="listShow">
-      <div class="left-list">可视区域内找到套房子</div>
-      <List
-        class="left-list"
-        :data-source="houseList"
-        item-layout="vertical"
-        :pagination="pagination"
-      >
-        <template #renderItem="{ item }">
-          <ListItem>
-            <ListItemMeta>
-              <template #title>
-                {{ item.title }}
-              </template>
-              <template #description>
-                <div>{{ item.house_type }}</div>
-                <div>{{ item.price }}元/月</div>
-              </template>
-            </ListItemMeta>
+    <div class="left">
+      <div class="left-item left-list-title"
+        ><h4>可视区域内找到套房子</h4> <CaretDownOutlined @click="listShow = !listShow"
+      /></div>
+      <div class="left-item">
+        <List
+          v-if="listShow"
+          class="left-list"
+          :data-source="houseList"
+          item-layout="vertical"
+          :pagination="pagination"
+        >
+          <template #renderItem="{ item }">
+            <ListItem>
+              <ListItemMeta>
+                <template #title>
+                  {{ item.title }}
+                </template>
+                <template #description>
+                  <div>{{ item.house_type }}</div>
+                  <div>{{ item.price }}元/月</div>
+                </template>
+              </ListItemMeta>
 
-            <template #extra>
-              <img width="60" alt="logo" src="public/resource/img/logo.png" />
-            </template>
-          </ListItem>
-        </template>
-      </List>
+              <template #extra>
+                <img width="60" alt="logo" src="public/resource/img/logo.png" />
+              </template>
+            </ListItem>
+          </template>
+        </List>
+      </div>
     </div>
   </div>
 </template>
@@ -55,7 +60,7 @@
   import { Map } from 'ol';
   import VectorLayer from 'ol/layer/Vector';
   import VectorSource from 'ol/source/Vector';
-  import { Fill, Style, Stroke, Circle, Text } from 'ol/style';
+  import { Fill, Style, Stroke, Circle, Text, Icon } from 'ol/style';
   // import { Cluster } from 'ol/source';
   import GeoJSON from 'ol/format/GeoJSON';
   import { Draw, Snap } from 'ol/interaction';
@@ -68,6 +73,8 @@
     ListItem,
     ListItemMeta,
   } from 'ant-design-vue';
+  // import { CardList } from '/@/components/CardList';
+  import { CaretDownOutlined } from '@ant-design/icons-vue';
   import { useMapStore } from '../../store/modules/map';
   import gaodePromise from '../../utils/gaode';
   import { Point, Polygon } from 'ol/geom';
@@ -144,63 +151,6 @@
   //   });
   // }
 
-  //
-  /**
-   * 点聚合图层绘制
-   */
-  // let clusterLayerAdded = false;
-  // const featuresArr = [];
-  // const clusterVectorSource = new VectorSource({
-  //   features: featuresArr,
-  // });
-  // const cluster = new Cluster({
-  //   source: clusterVectorSource,
-  //   distance: 100,
-  // });
-  // const clusterLayer = new VectorLayer({
-  //   source: cluster,
-  //   style: function (feature) {
-  //     let size = feature.get('features').length;
-  //     if (size < 10) {
-  //       return new Style({
-  //         image: new Circle({
-  //           radius: 8,
-  //           fill: new Fill({
-  //             color: '#ff0813',
-  //           }),
-  //         }),
-  //       });
-  //     }
-  //     let style = new Style({
-  //       fill: new Fill({
-  //         color: 'rgba(255, 255, 255, 0.2)',
-  //       }),
-  //       stroke: new Stroke({
-  //         color: '#ffcc33',
-  //         width: 2,
-  //       }),
-  //       image: new Circle({
-  //         radius: 16,
-  //         fill: new Fill({
-  //           color: '#ffcc33',
-  //         }),
-  //       }),
-  //     });
-  //     return style;
-  //   },
-  // });
-  // function ClusterPoint(map: Map, coordinates: number[]) {
-  //   for (let i = 0; i < coordinates.length; i++) {
-  //     let feature = new Feature({
-  //       geometry: new Point([coordinates[i].wgs84_lng, coordinates[i].wgs84_lat]),
-  //     });
-  //     featuresArr.push(feature as never);
-  //   }
-  //   clusterVectorSource.clear();
-  //   clusterVectorSource.addFeatures(featuresArr);
-  //   if (!clusterLayerAdded) map.addLayer(clusterLayer);
-  // }
-
   /**
    * 按钮选择处理器
    */
@@ -233,10 +183,6 @@
   // 选择地铁线路
   function SubwaySelect() {
     const map = mapStore.GetMap;
-    // subwayVectorSource等于undefined判断为true，赋值给isFirstCall标记为第一次进行选择
-    // if (subwayVectorSource != undefined) {
-    //   subwayVectorLayer.getSource().clear();
-    // }
     switch (activeLine.value) {
       case '一号线':
         AddWFS(map as Map, subwaylines.lineOne.url);
@@ -259,10 +205,27 @@
       isFirstCall = true;
     }
   }
+
   // 获取图层要素信息
   let subwayLayerAdd = false;
   let circleDraw;
   let snap;
+
+  // 监听器
+  let subwaySearchListener;
+  let polygonSearchListener;
+  let arrivalSearchListener;
+  let clickPlotListener;
+  let mapMoveListener;
+  const drawStyle = new Style({
+    fill: new Fill({
+      color: 'rgb(172,223,200,0.4)',
+    }),
+    stroke: new Stroke({
+      color: 'rgb(0,174,102,0.7)',
+      width: 2,
+    }),
+  });
   function GetFeature(map: Map) {
     if (polygonSearchListener) {
       unByKey(polygonSearchListener);
@@ -272,42 +235,42 @@
       unByKey(arrivalSearchListener);
       arrivalSearchListener = null;
     }
+    if (mapMoveListener) {
+      unByKey(mapMoveListener);
+      mapMoveListener = null;
+    }
     if (subwaySearchListener) {
-      unByKey(subwaySearchListener);
-      subwaySearchListener = null;
+      return;
     }
 
     circleDraw = new Draw({
       source: new VectorSource(),
       type: 'Circle',
-      style: new Style({
-        fill: new Fill({
-          color: 'rgba(255, 255, 255, 0.3)',
-        }),
-        stroke: new Stroke({
-          color: '#ff1233',
-          width: 2,
-        }),
-      }),
+      style: drawStyle,
       // condition接受boolen，函数返回true绘制当前点
       condition: (event) => {
         let features = map.getFeaturesAtPixel(event.pixel);
-
-        if (features.length !== 0) {
-          console.log('propetry');
-          let plot = features[0].getProperties().plot;
-          console.log(plot);
-          if (plot) return false;
-          let point = features[0].getGeometry();
-          let coordinates = point.getCoordinates();
-          if (coordinates !== null) {
-            center = coordinates;
-            // console.log('coordinates');
-            // console.log(coordinates);
-          }
-          return true;
+        if (features.length === 0) {
+          return false;
         }
-        return false;
+        const properties = features[0].getProperties();
+        const plot = properties.plot;
+
+        if (plot) {
+          console.log('property:', properties);
+          return false;
+        }
+
+        const geometry = features[0].getGeometry();
+        // ?. js语法访问对象属性或调用方法时，如果目标对象或属性不存在（即为 null 或 undefined）
+        // 不会抛出错误，而是直接返回 undefined
+        console.log('geometry:', geometry);
+        const coordinates = geometry?.getCoordinates();
+        if (coordinates) {
+          center = coordinates;
+          console.log('coordinates:', coordinates);
+        }
+        return true;
       },
     });
     snap = new Snap({
@@ -360,30 +323,36 @@
       }
     });
     activeLine.value = '请选择地铁线路';
-    subwayVectorLayer.getSource().clear();
+    subwayVectorSource.clear();
     map.removeInteraction(circleDraw);
     isFirstCall = false;
   }
   // 加载WFS服务图层
-  let subwayVectorSource: VectorSource | undefined;
+  let subwayVectorSource = new VectorSource({
+    format: new GeoJSON(),
+  });
   let subwayVectorLayer = new VectorLayer({
     source: subwayVectorSource,
     style: new Style({
       image: new Circle({
         radius: 8,
         fill: new Fill({
-          color: '#ffcc33',
+          color: 'rgb(255,255,255)',
+        }),
+        stroke: new Stroke({
+          color: '#f9d79d',
+          width: 4,
         }),
       }),
     }),
   });
-  function AddWFS(map: Map, layer) {
-    if (subwayVectorSource != undefined) {
-      subwayVectorLayer.getSource().clear();
+  function AddWFS(map: Map, url) {
+    if (subwayVectorSource) {
+      subwayVectorSource.clear();
     }
     subwayVectorSource = new VectorSource({
       format: new GeoJSON(),
-      url: layer,
+      url: url,
     });
     subwayVectorLayer.setSource(subwayVectorSource);
 
@@ -393,13 +362,10 @@
     }
   }
 
-  let subwaySearchListener;
-  let polygonSearchListener;
-  let arrivalSearchListener;
-  let clickPlotListener;
   const pagination = {
     pageSize: 4,
   };
+
   // 多边形搜索处理
   const listShow = ref(false);
   const houseList = ref([] as any[]);
@@ -417,23 +383,30 @@
   function PolygonSearch() {
     const map = mapStore.GetMap;
     // 清除所有监听器
-    if (polygonSearchListener) {
-      unByKey(polygonSearchListener);
-      polygonSearchListener = null;
+    if (subwaySearchListener) {
+      unByKey(subwaySearchListener);
+      subwaySearchListener = null;
     }
     if (arrivalSearchListener) {
       unByKey(arrivalSearchListener);
       arrivalSearchListener = null;
+    }
+    if (mapMoveListener) {
+      unByKey(mapMoveListener);
+      mapMoveListener = null;
+    }
+    if (polygonSearchListener) {
+      return;
     }
     polygonDraw = new Draw({
       source: new VectorSource(),
       type: 'Polygon',
       style: new Style({
         fill: new Fill({
-          color: 'rgba(255, 255, 255, 0.3)',
+          color: 'rgb(172,223,200,0.4)',
         }),
         stroke: new Stroke({
-          color: '#ff1233',
+          color: 'rgb(0,174,102,0.7)',
           width: 2,
         }),
       }),
@@ -443,6 +416,9 @@
         if (features.length == 0) {
           return true;
         } else {
+          console.log('features');
+          console.log(features[0].getProperties());
+
           let plot = features[0].getProperties().plot;
           if (plot) return false;
           return true;
@@ -482,35 +458,62 @@
     const map = mapStore.GetMap;
     map.getInteractions().forEach((interaction) => {
       if (interaction instanceof Draw) {
-        let result = map.removeInteraction(interaction);
-        console.log('Draw');
-        console.log(result);
+        let draw = map.removeInteraction(interaction);
+        console.log('Draw', draw);
       }
     });
 
-    // let result = map.removeInteraction(polygonDraw);
-    // console.log('Draw');
-    // console.log(result);
+    // let draw = map.removeInteraction(polygonDraw);
+    // console.log('Draw',draw);
   }
+  let currentOverlayPoint;
   // 点击小区overlay获取详细租房信息
   function GetHouseByClickPlot(map: Map) {
     if (clickPlotListener) {
-      unByKey(clickPlotListener);
-      clickPlotListener = null;
+      return;
     }
 
     return map.on('click', async (event) => {
-      let features = map.getFeaturesAtPixel(event.pixel);
-      if (features.length !== 0) {
-        let property = features[0].getProperties();
-        if (property.plot !== undefined) {
-          const param: PlotData = {
-            plot: property.plot,
-          };
-          const response = await getHouseInPlots(param);
-          houseList.value = [...response.data];
+      const features = map.getFeaturesAtPixel(event.pixel);
+      if (features.length == 0) {
+        return;
+      }
+      // console.log('features', features);
+      const property = features[0].getProperties();
+      if (property.plot) {
+        const param: PlotData = {
+          plot: property.plot,
+        };
+        const response = await getHouseInPlots(param);
+        houseList.value = [...response.data];
+        // console.log('property', property);
+
+        // 还原上一点样式
+        if (currentOverlayPoint) {
+          const style = overLayStyle(currentOverlayPoint);
+          currentOverlayPoint.setStyle(style);
         }
-        console.log(property);
+        // 更改当前点样式为点击状态
+        const text = property.plot + '|' + property.count + '套';
+        const textWidth = context.measureText(text).width;
+        features[0].setStyle(
+          new Style({
+            text: new Text({
+              font: '14px Arial',
+              text: text,
+              fill: new Fill({ color: '#fff' }),
+              offsetX: 8,
+            }),
+            image: new Icon({
+              src: 'src/assets/svg/overlay-bg-click.svg',
+              anchor: [0.5, 20],
+              anchorXUnits: 'fraction',
+              anchorYUnits: 'pixels',
+              scale: [textWidth / 100, 0.8],
+            }),
+          }),
+        );
+        currentOverlayPoint = features[0];
       }
     });
   }
@@ -522,19 +525,11 @@
   const drawVectorSource = new VectorSource();
   const drawVectorLayer = new VectorLayer({
     source: drawVectorSource,
-    style: new Style({
-      fill: new Fill({
-        color: 'rgba(255, 205, 255, 0.4)',
-      }),
-      stroke: new Stroke({
-        color: '#ff1233',
-        width: 2,
-      }),
-    }),
+    style: drawStyle,
   });
   function ArrivalRangeHandle(index) {
     if (activeButton.value == index) {
-      drawVectorLayer.getSource().clear();
+      drawVectorSource.clear();
       activeButton.value == -1;
     } else {
       ArrivalRangeSearch();
@@ -546,17 +541,24 @@
       unByKey(polygonSearchListener);
       polygonSearchListener = null;
     }
-    if (arrivalSearchListener) {
-      unByKey(arrivalSearchListener);
-      arrivalSearchListener = null;
+    if (subwaySearchListener) {
+      unByKey(subwaySearchListener);
+      subwaySearchListener = null;
     }
+    if (mapMoveListener) {
+      unByKey(mapMoveListener);
+      mapMoveListener = null;
+    }
+    if (arrivalSearchListener) {
+      return;
+    }
+
     const map = mapStore.GetMap;
     arrivalSearchListener = map.on('click', (event) => {
       // 思路：判断当前点击位置与获取到的feature位置对比，小于阈值判断该位置有渲染点，取消调用高德api
       let pixelCoordinate = map.getCoordinateFromPixel(event.pixel);
       let feature = map.getFeaturesAtPixel(event.pixel);
-      // console.log('feature');
-      // console.log(feature);
+      // console.log('feature',feature);
       if (feature.length === 0) {
         // 调用高德接口
         gaodePromise.then((arrivalRange) => {
@@ -585,6 +587,14 @@
                 });
                 polygonList.push(polygonParam);
               });
+              // forEach修改原始数组，map不修改但返回一个遍历处理过的数组
+              // polygonList = result.bounds.map((element) => {
+              //   const polygon: PointData[] = element[0].map((item) => ({
+              //     longitude: item[0],
+              //     latitude: item[1],
+              //   }));
+              //   return { polygon };
+              // });
               const response = await getPlotsInPolygonList(polygonListParam);
               AddOverlay(map as Map, response.data.plots);
               houseList.value = [...response.data.houseList];
@@ -602,7 +612,7 @@
   // 矢量图层绘制
   function VectorLayerDraw(polygon) {
     const map = mapStore.GetMap;
-    drawVectorLayer.getSource().clear();
+    drawVectorSource.clear();
     let featureArray = [];
     polygon.forEach((element) => {
       let feature = new Feature({
@@ -617,43 +627,69 @@
     }
   }
 
+  // 地图层级查询
+  function MapLevelSearch() {
+    const map = mapStore.GetMap;
+    mapMoveListener = map.on('moveend', async () => {
+      const viewZoom = map.getView().getZoom();
+      if (viewZoom && viewZoom > 16) {
+        console.log('center', map.getView().getCenter());
+        const center = map.getView().getCenter();
+        if (center) {
+          const param: CircleData = {
+            longitude: center[0],
+            latitude: center[1],
+            radius: 0.01,
+          };
+          const response = await getPlotsInCircle(param);
+          AddOverlay(map as Map, response.data.plots);
+        }
+      }
+    });
+  }
+
   // popup图标绘制
   let overLaySourceAdd = false;
-  let overlayFeatureArray = [];
+  const overlayFeatureArray = [];
   const overLaySource = new VectorSource();
   const overLayLayer = new VectorLayer({
     source: overLaySource,
-    style: (feature) => {
-      // console.log(feature.getProperties());
-      const property = feature.getProperties();
-      const count = property.count;
-      const plot = property.plot;
-
-      return new Style({
-        text: new Text({
-          font: '14px Arial',
-          text: plot + '|' + count + '套',
-          fill: new Fill({ color: '#000' }),
-          stroke: new Stroke({ color: '#fff', width: 2 }),
-        }),
-        image: new Circle({
-          radius: 16,
-          fill: new Fill({
-            color: '#ffcc33',
-          }),
-        }),
-        // image: new Icon({
-        //   src: 'path/to/icon.png',
-        //   anchor: [0.5, 46],
-        //   anchorXUnits: 'fraction',
-        //   anchorYUnits: 'pixels',
-        //   scale: 0.5,
-        // }),
-      });
-    },
+    // 传入style处理函数
+    style: overLayStyle,
   });
+
+  // 使用canvas创建 text 文本中的内容，但不渲染至屏幕，仅用于计算text像素长度
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  context.font = '14px Arial';
+  // overLayLayer图层style函数
+  function overLayStyle(feature) {
+    // console.log(feature.getProperties());
+    const property = feature.getProperties();
+    const count = property.count;
+    const plot = property.plot;
+    const text = plot + '|' + count + '套';
+    // 计算text像素长度
+    const textWidth = context.measureText(text).width;
+
+    return new Style({
+      text: new Text({
+        font: '14px Arial',
+        text: text,
+        fill: new Fill({ color: '#fff' }),
+        offsetX: 8,
+      }),
+      image: new Icon({
+        src: 'src/assets/svg/overlay-bg.svg',
+        anchor: [0.5, 20],
+        anchorXUnits: 'fraction',
+        anchorYUnits: 'pixels',
+        scale: [textWidth / 100, 0.9],
+      }),
+    });
+  }
   function AddOverlay(map: Map, data) {
-    overlayFeatureArray = [];
+    overlayFeatureArray.length = 0;
     data.forEach((element) => {
       let feature = new Feature({
         geometry: new Point([element.wgs84_lng, element.wgs84_lat]),
@@ -666,37 +702,170 @@
       overlayFeatureArray.push(feature as never);
     });
 
-    if (overLayLayer.getSource() !== null) {
-      overLayLayer.getSource().clear();
+    if (overLaySource) {
+      overLaySource.clear();
     }
     overLaySource.addFeatures(overlayFeatureArray);
     overLayLayer.setSource(overLaySource);
 
     if (overLaySourceAdd === false) {
       map.addLayer(overLayLayer);
+      // map.addLayer(clusterLayer);
       overLaySourceAdd = true;
     }
   }
 
+  //
+  /**
+   * 点聚合图层绘制
+   */
+  // let clusterLayerAdded = false;
+  // const featuresArr = [];
+  // const clusterVectorSource = new VectorSource({
+  //   features: featuresArr,
+  // });
+  // const cluster = new Cluster({
+  //   source: overLaySource,
+  //   distance: 50,
+  // });
+  // const clusterLayer = new VectorLayer({
+  //   source: cluster,
+  //   style: function (feature) {
+  //     const property = feature.getProperties();
+  //     console.log('property');
+  //     console.log(property);
+  //     // const count = property.count;
+  //     // const plot = property.plot;
+  //     const subFeatures = feature.get('features'); // 获取聚合的子feature
+  //     console.log('subFeatures');
+  //     console.log(subFeatures);
+  //     let size = subFeatures.length;
+  //     // if (size < 10) {
+  //     //   subFeatures.forEach((element) => {
+  //     //     const plot = element.get('plot');
+  //     //     const count = element.get('count');
+  //     //     return new Style({
+  //     //       text: new Text({
+  //     //         font: '14px Arial',
+  //     //         text: plot + '|' + count + '套',
+  //     //         fill: new Fill({ color: '#000' }),
+  //     //         stroke: new Stroke({ color: '#fff', width: 2 }),
+  //     //       }),
+  //     //       image: new Circle({
+  //     //         radius: 16,
+  //     //         fill: new Fill({
+  //     //           color: 'rgb(0,174,102,0.7)',
+  //     //         }),
+  //     //       }),
+  //     //     });
+  //     //   });
+  //     // }
+
+  //     if (size < 5) {
+  //       return subFeatures.map((subFeature) => {
+  //         const plot = subFeature.get('plot');
+  //         const count = subFeature.get('count');
+  //         return new Style({
+  //           text: new Text({
+  //             font: '14px Arial',
+  //             text: plot + '|' + count + '套',
+  //             fill: new Fill({ color: '#000' }),
+  //             stroke: new Stroke({ color: '#fff', width: 2 }),
+  //           }),
+  //           image: new Circle({
+  //             radius: 16,
+  //             fill: new Fill({
+  //               color: 'rgb(0,174,102,0.7)',
+  //             }),
+  //           }),
+  //         });
+  //       });
+  //     } else {
+  //       // 聚合样式
+  //       return new Style({
+  //         text: new Text({
+  //           font: '14px Arial',
+  //           text: size.toString(), // 将 size 转换为字符串
+  //           fill: new Fill({ color: '#000' }),
+  //         }),
+  //         image: new Circle({
+  //           radius: 13,
+  //           fill: new Fill({
+  //             color: '#ff0813',
+  //           }),
+  //         }),
+  //       });
+  //     }
+
+  //     let style = new Style({
+  //       text: new Text({
+  //         font: '14px Arial',
+  //         // 需要确保text为字符串 text:size (size为number，参数类型错误)
+  //         text: size.toString(),
+  //         fill: new Fill({ color: '#000' }),
+  //         // stroke: new Stroke({ color: '#fff', width: 2 }),
+  //       }),
+  //       image: new Circle({
+  //         radius: 8,
+  //         fill: new Fill({
+  //           color: '#ff0813',
+  //         }),
+  //       }),
+  //     });
+
+  //     // let style = new Style({
+  //     //   fill: new Fill({
+  //     //     color: 'rgba(255, 255, 255, 0.2)',
+  //     //   }),
+  //     //   stroke: new Stroke({
+  //     //     color: '#ffcc33',
+  //     //     width: 2,
+  //     //   }),
+  //     //   image: new Circle({
+  //     //     radius: 16,
+  //     //     fill: new Fill({
+  //     //       color: '#ffcc33',
+  //     //     }),
+  //     //   }),
+  //     // });
+  //     return style;
+  //   },
+  // });
+  // function ClusterPoint(map: Map, coordinates: number[]) {
+  //   for (let i = 0; i < coordinates.length; i++) {
+  //     let feature = new Feature({
+  //       geometry: new Point([coordinates[i].wgs84_lng, coordinates[i].wgs84_lat]),
+  //     });
+  //     featuresArr.push(feature as never);
+  //   }
+  //   clusterVectorSource.clear();
+  //   clusterVectorSource.addFeatures(featuresArr);
+  //   if (!clusterLayerAdded) map.addLayer(clusterLayer);
+  // }
+
   // 监听按钮在激活状态下的切换
+
   watch(activeButton, (newValue, oldValue) => {
     // 切换前激活地铁查询，切换后激活其他查询，且按钮不为停止状态
     if (oldValue === 0 && newValue !== 0 && newValue !== -1) {
       SubwaySearchClear();
-      const map = mapStore.GetMap;
-      console.log('12323');
-      console.log(map.getInteractions());
     }
     if (oldValue === 1 && newValue !== 1 && newValue !== -1) {
       PolygonSearchClear();
     }
     if (oldValue === 2 && newValue !== 2 && newValue !== -1) {
-      drawVectorLayer.getSource().clear();
+      drawVectorSource.clear();
+    }
+    // 按钮为停止状态启动地图层级查询
+    if (newValue === -1) {
+      MapLevelSearch();
     }
   });
 
   onMounted(() => {
     mapStore.InitOpenlayers('container');
+
+    MapLevelSearch();
   });
 </script>
 
@@ -730,16 +899,25 @@
     .left {
       position: absolute;
       width: 350px;
-      height: 650px;
       top: 30px;
       left: 20px;
       z-index: 999;
-      // display: flex;
-      // justify-content: center;
-      // background-color: #de9c9c;
-      .left-list {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      background-color: #de9c9c;
+      .left-item {
         background-color: #fff;
         width: 90%;
+      }
+      .left-list-title {
+        height: 50px;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+      }
+      .left-list {
+        padding: 20px;
       }
     }
   }
