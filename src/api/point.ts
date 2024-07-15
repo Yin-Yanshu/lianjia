@@ -1,5 +1,11 @@
 import { defHttp } from '/@/utils/http/axios';
 
+export interface OptionData {
+  price_min?: number;
+  price_max?: number;
+  lease_type?: string;
+}
+
 export interface PointData {
   longitude: number;
   latitude: number;
@@ -7,16 +13,19 @@ export interface PointData {
 
 export interface PolygonData {
   polygon: PointData[];
+  option?: OptionData;
 }
 
 export interface PolygonListData {
   polygonList: PolygonData[];
+  option?: OptionData;
 }
 
 export interface CircleData {
   latitude: number;
   longitude: number;
   radius: number;
+  option?: OptionData;
 }
 
 export interface PlotData {
@@ -62,6 +71,15 @@ export const getPlotsInCircle = (data: CircleData) => {
 export const getHouseInPlots = (data: PlotData) => {
   return defHttp.post({
     url: '/house/within-plot',
+    data: {
+      ...data,
+    },
+  });
+};
+
+export const getHouseCountInRegion = (data: PolygonData) => {
+  return defHttp.post({
+    url: '/house/within-region',
     data: {
       ...data,
     },

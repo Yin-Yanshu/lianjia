@@ -19,13 +19,50 @@
         </div>
       </div>
     </div>
+    <div class="middle">
+      <div class="middle-item">
+        <Button @click="PropertiesActiveButtonHandle(0)">方式</Button>
+        <Button @click="PropertiesActiveButtonHandle(1)">租金</Button>
+        <Button @click="SearchfilterHandle(0)">清空筛选</Button>
+      </div>
+      <div v-if="propertyFromShow === 0" class="middle-item">
+        <Form class="middle-item-leaseform">
+          <FormItem>
+            <CheckboxGroup v-model:value="lease_typeCheck">
+              <Checkbox :value="0">整租</Checkbox>
+              <Checkbox :value="1">合租</Checkbox>
+              <!-- <Checkbox
+                :checked="lease_typeCheck[0] === 1"
+                :value="1"
+                @change="handleCheckboxChange(1)"
+                >合租</Checkbox
+              > -->
+            </CheckboxGroup>
+          </FormItem>
+          <FormItem>
+            <Button @click="SearchfilterHandle(-2)">重置</Button>
+            <Button @click="SearchfilterHandle(2)">确认</Button>
+          </FormItem>
+        </Form>
+      </div>
+      <div v-if="propertyFromShow === 1" class="middle-item">
+        <Form class="middle-item-priceform">
+          <FormItem>
+            <Slider v-model:value="priceSliderValue" range :min="0" :max="9000" />
+          </FormItem>
+          <FormItem>
+            <Button @click="SearchfilterHandle(-1)">重置</Button>
+            <Button @click="SearchfilterHandle(1)">确认</Button>
+          </FormItem>
+        </Form>
+      </div>
+    </div>
     <div class="left">
       <div class="left-item left-list-title"
         ><h4>可视区域内找到套房子</h4> <CaretDownOutlined @click="listShow = !listShow"
       /></div>
-      <div class="left-item">
+      <div v-if="listShow" class="left-item">
         <List
-          v-if="listShow"
           class="left-list"
           :data-source="houseList"
           item-layout="vertical"
@@ -61,7 +98,6 @@
   import VectorLayer from 'ol/layer/Vector';
   import VectorSource from 'ol/source/Vector';
   import { Fill, Style, Stroke, Circle, Text, Icon } from 'ol/style';
-  // import { Cluster } from 'ol/source';
   import GeoJSON from 'ol/format/GeoJSON';
   import { Draw, Snap } from 'ol/interaction';
   import {
@@ -72,8 +108,11 @@
     List,
     ListItem,
     ListItemMeta,
+    Form,
+    FormItem,
+    CheckboxGroup,
+    Checkbox,
   } from 'ant-design-vue';
-  // import { CardList } from '/@/components/CardList';
   import { CaretDownOutlined } from '@ant-design/icons-vue';
   import { useMapStore } from '../../store/modules/map';
   import gaodePromise from '../../utils/gaode';
@@ -89,8 +128,10 @@
     PolygonData,
     PolygonListData,
     PlotData,
+    OptionData,
   } from '../../api/point';
   import { unByKey } from 'ol/Observable';
+  import { debounce } from 'lodash-es';
 
   const subwaylines = {
     lineOne: {
@@ -169,6 +210,116 @@
     }
   }
 
+  let currentPropertyButton = ref(-1);
+  // 属性过滤器按钮选中控制
+  function PropertiesActiveButtonHandle(index) {
+    switch (index) {
+      // 方式过滤
+      case 0:
+        if (currentPropertyButton.value === index) {
+          propertyFromShow.value = -1;
+          currentPropertyButton.value = -1;
+        } else {
+          propertyFromShow.value = 0;
+          currentPropertyButton.value = 0;
+        }
+        break;
+      // 价格过滤
+      case 1:
+        if (currentPropertyButton.value === index) {
+          propertyFromShow.value = -1;
+          currentPropertyButton.value = -1;
+        } else {
+          propertyFromShow.value = 1;
+          currentPropertyButton.value = 1;
+        }
+        break;
+    }
+  }
+  // function handleCheckboxChange(value) {
+  //   lease_typeCheck.value = value;
+  // }
+  let propertyFromShow = ref(-1);
+  // 过滤器选项
+  let option = {} as OptionData;
+  const lease_typeCheck = ref([]);
+  const priceSliderValue = ref<[number, number]>([2000, 5000]);
+  // 查询参数过滤策略控制器
+  function SearchfilterHandle(index) {
+    switch (index) {
+      //  确认关闭属性过滤
+      case 0:
+        option = {};
+        break;
+      // 确认增加 价格 过滤
+      case 1:
+        option.price_min = priceSliderValue.value[0];
+        option.price_max = priceSliderValue.value[1];
+        propertyFromShow.value = -1;
+        break;
+      // 确认清除 价格 过滤
+      case -1:
+        delete option.price_min;
+        delete option.price_max;
+        propertyFromShow.value = -1;
+        break;
+      // 确认增加 方式 过滤
+      case 2:
+        if (lease_typeCheck.value[0] === 0) {
+          option.lease_type = '整租';
+        } else if (lease_typeCheck.value[0] === 1) {
+          option.lease_type = '合租';
+        }
+        propertyFromShow.value = -1;
+        break;
+      // 确认清除 方式 过滤
+      case -2:
+        delete option.lease_type;
+        propertyFromShow.value = -1;
+        break;
+    }
+  }
+  // 查询参数过滤器
+  function Searchfilter(param) {
+    // 过滤选项option为空，返回param
+    if (Object.keys(option).length == 0) return param;
+    if (!param.option) {
+      param.option = {};
+    }
+    // 过滤选项option为空，遍option内容赋值给param
+    Object.entries(option).forEach(([key, value]) => {
+      param.option[key] = value;
+    });
+    return param;
+    // 思路错误 switch仅能过滤有限个属性
+    // switch (filterIndex.value) {
+    //   //  关闭属性过滤
+    //   case -1:
+    //     return param;
+    //   // 开启 价格 过滤
+    //   case 0:
+    //     param.option = {
+    //       price_min: price_min,
+    //       price_max: price_max,
+    //     };
+    //     return param;
+    //   // 开启 方式 过滤
+    //   case 1:
+    //     param.option = {
+    //       lease_type: lease_type,
+    //     };
+    //     return param;
+    //   // 开启 价格 方式 过滤
+    //   case 2:
+    //     param.option = {
+    //       price_min: price_min.value,
+    //       price_max: price_max.value,
+    //       lease_type: lease_type.value,
+    //     };
+    //     return param;
+    // }
+  }
+
   let isFirstCall = false;
   const activeLine = ref('请选择地铁线路');
   // 激活地铁选择下拉栏
@@ -216,7 +367,29 @@
   let polygonSearchListener;
   let arrivalSearchListener;
   let clickPlotListener;
-  let mapMoveListener;
+  let mapMoveEndListener;
+  let pointMoveListener;
+  // 监听器清除函数，可选保留监听器或全部清除 不提供参数exceptListener则全部清除
+  function ListenerClear(exceptListener?) {
+    // 如果subwaySearchListener存在且subwaySearchListener不等于保留监听器则unByKey
+    if (subwaySearchListener && subwaySearchListener !== exceptListener) {
+      unByKey(subwaySearchListener);
+      subwaySearchListener = null;
+    }
+    if (polygonSearchListener && polygonSearchListener !== exceptListener) {
+      unByKey(polygonSearchListener);
+      polygonSearchListener = null;
+    }
+    if (arrivalSearchListener && arrivalSearchListener !== exceptListener) {
+      unByKey(arrivalSearchListener);
+      arrivalSearchListener = null;
+    }
+    if (mapMoveEndListener && mapMoveEndListener !== exceptListener) {
+      unByKey(mapMoveEndListener);
+      mapMoveEndListener = null;
+    }
+  }
+
   const drawStyle = new Style({
     fill: new Fill({
       color: 'rgb(172,223,200,0.4)',
@@ -227,21 +400,7 @@
     }),
   });
   function GetFeature(map: Map) {
-    if (polygonSearchListener) {
-      unByKey(polygonSearchListener);
-      polygonSearchListener = null;
-    }
-    if (arrivalSearchListener) {
-      unByKey(arrivalSearchListener);
-      arrivalSearchListener = null;
-    }
-    if (mapMoveListener) {
-      unByKey(mapMoveListener);
-      mapMoveListener = null;
-    }
-    if (subwaySearchListener) {
-      return;
-    }
+    ListenerClear();
 
     circleDraw = new Draw({
       source: new VectorSource(),
@@ -283,12 +442,15 @@
     let center;
     // 本项目规范，一定需要定义但未使用的变量采用_前缀
     subwaySearchListener = circleDraw.on('drawend', async (_event) => {
-      const parm: CircleData = {
-        longitude: center[0],
-        latitude: center[1],
+      let param: CircleData = {
+        longitude: 0,
+        latitude: 0,
         radius: 0.01,
       };
-      const response = await getPlotsInCircle(parm);
+      param.longitude = center[0];
+      param.latitude = center[1];
+      param = Searchfilter(param);
+      const response = await getPlotsInCircle(param);
       AddOverlay(map, response.data.plots);
       houseList.value = [...response.data.houseList];
       listShow.value = true;
@@ -383,21 +545,8 @@
   function PolygonSearch() {
     const map = mapStore.GetMap;
     // 清除所有监听器
-    if (subwaySearchListener) {
-      unByKey(subwaySearchListener);
-      subwaySearchListener = null;
-    }
-    if (arrivalSearchListener) {
-      unByKey(arrivalSearchListener);
-      arrivalSearchListener = null;
-    }
-    if (mapMoveListener) {
-      unByKey(mapMoveListener);
-      mapMoveListener = null;
-    }
-    if (polygonSearchListener) {
-      return;
-    }
+    ListenerClear();
+
     polygonDraw = new Draw({
       source: new VectorSource(),
       type: 'Polygon',
@@ -442,10 +591,11 @@
         };
         polygon.push(point as never);
       });
-      const param: PolygonData = {
+      let param: PolygonData = {
         polygon: polygon,
       };
-
+      // 参数过滤，添加查询限制条件
+      param = Searchfilter(param);
       const response = await getPlotsInPolygon(param);
       AddOverlay(map as Map, response.data.plots);
       houseList.value = [...response.data.houseList];
@@ -478,15 +628,25 @@
       if (features.length == 0) {
         return;
       }
-      // console.log('features', features);
-      const property = features[0].getProperties();
-      if (property.plot) {
-        const param: PlotData = {
+
+      let property;
+      // 返回第一个小区概况feature
+      let feature = features.find((item) => {
+        return item.getProperties().plot;
+      });
+      // 获取小区概况feature的property
+      if (feature) {
+        property = feature.getProperties();
+      }
+      // 获取到小区名查询具体租房信息
+      if (property) {
+        let param: PlotData = {
           plot: property.plot,
         };
+        param = Searchfilter(param);
         const response = await getHouseInPlots(param);
         houseList.value = [...response.data];
-        // console.log('property', property);
+        listShow.value = true;
 
         // 还原上一点样式
         if (currentOverlayPoint) {
@@ -537,76 +697,62 @@
     }
   }
   function ArrivalRangeSearch() {
-    if (polygonSearchListener) {
-      unByKey(polygonSearchListener);
-      polygonSearchListener = null;
-    }
-    if (subwaySearchListener) {
-      unByKey(subwaySearchListener);
-      subwaySearchListener = null;
-    }
-    if (mapMoveListener) {
-      unByKey(mapMoveListener);
-      mapMoveListener = null;
-    }
-    if (arrivalSearchListener) {
-      return;
-    }
-
+    // 清除所有监听函数
+    ListenerClear();
     const map = mapStore.GetMap;
     arrivalSearchListener = map.on('click', (event) => {
-      // 思路：判断当前点击位置与获取到的feature位置对比，小于阈值判断该位置有渲染点，取消调用高德api
+      // 处理思路：判断获取到要素是否含有小区overlay要素，未找到则调用高德api
       let pixelCoordinate = map.getCoordinateFromPixel(event.pixel);
       let feature = map.getFeaturesAtPixel(event.pixel);
-      // console.log('feature',feature);
-      if (feature.length === 0) {
-        // 调用高德接口
-        gaodePromise.then((arrivalRange) => {
-          const polygonList = [] as PolygonData[];
-          const polygonListParam: PolygonListData = { polygonList: polygonList };
 
-          // (起点坐标，到达时间，回调函数，出行方式)
-          arrivalRange.search(
-            [pixelCoordinate[0], pixelCoordinate[1]],
-            arriveTime.value,
-            async (_status, result) => {
-              VectorLayerDraw(result.bounds);
-              polygonList.length = 0;
+      // console.log('feature', feature);
+      // 查找点击点是否含有小区overlay要素
+      let plot = feature.find((item) => {
+        return item.getProperties().plot;
+      });
+      // 该点找到小区overlay要素中断后续操作
+      if (plot) return;
 
-              result.bounds.forEach((element) => {
-                const polygon = [] as PointData[];
-                let polygonParam: PolygonData = {
-                  polygon: polygon,
+      // 该点找到小区overlay要素,调用高德api
+      gaodePromise.then((arrivalRange) => {
+        const polygonList = [] as PolygonData[];
+        let polygonListParam: PolygonListData = { polygonList: polygonList };
+
+        // (起点坐标，到达时间，回调函数，出行方式)
+        arrivalRange.search(
+          [pixelCoordinate[0], pixelCoordinate[1]],
+          arriveTime.value,
+          async (_status, result) => {
+            VectorLayerDraw(result.bounds);
+            polygonList.length = 0;
+
+            result.bounds.forEach((element) => {
+              const polygon = [] as PointData[];
+              let polygonParam: PolygonData = {
+                polygon: polygon,
+              };
+              element[0].forEach((item) => {
+                let point: PointData = {
+                  longitude: item[0],
+                  latitude: item[1],
                 };
-                element[0].forEach((item) => {
-                  let point: PointData = {
-                    longitude: item[0],
-                    latitude: item[1],
-                  };
-                  polygon.push(point);
-                });
-                polygonList.push(polygonParam);
+                polygon.push(point);
               });
-              // forEach修改原始数组，map不修改但返回一个遍历处理过的数组
-              // polygonList = result.bounds.map((element) => {
-              //   const polygon: PointData[] = element[0].map((item) => ({
-              //     longitude: item[0],
-              //     latitude: item[1],
-              //   }));
-              //   return { polygon };
-              // });
-              const response = await getPlotsInPolygonList(polygonListParam);
-              AddOverlay(map as Map, response.data.plots);
-              houseList.value = [...response.data.houseList];
-              listShow.value = true;
-              GetHouseByClickPlot(map as Map);
-            },
-            {
-              policy: arriveOption.value,
-            },
-          );
-        });
-      }
+              polygonList.push(polygonParam);
+            });
+            // 查询参数过滤器
+            polygonListParam = Searchfilter(polygonListParam);
+            const response = await getPlotsInPolygonList(polygonListParam);
+            AddOverlay(map as Map, response.data.plots);
+            houseList.value = [...response.data.houseList];
+            listShow.value = true;
+            GetHouseByClickPlot(map as Map);
+          },
+          {
+            policy: arriveOption.value,
+          },
+        );
+      });
     });
   }
   // 矢量图层绘制
@@ -627,25 +773,170 @@
     }
   }
 
+  // 地图层级查询模块
+  let regionLayerAdd = false;
+  let regionOverlayLayerAdd = false;
+  let pointerMoveListenerAdded = false;
+  const regionOverlaySource = new VectorSource();
+  const regionOverlayLayer = new VectorLayer({
+    source: regionOverlaySource,
+    style: (feature) => {
+      const property = feature.getProperties();
+      const text = property.properties.name + '\n' + property.properties.house_count + '套';
+      return new Style({
+        text: new Text({
+          font: '14px Arial',
+          text: text,
+          fill: new Fill({ color: '#fff' }),
+          offsetX: 8,
+        }),
+        image: new Icon({
+          src: 'src/assets/svg/overlay-bg.svg',
+          anchor: [0.5, 20],
+          anchorXUnits: 'fraction',
+          anchorYUnits: 'pixels',
+          scale: [1, 0.9],
+        }),
+      });
+    },
+  });
+  const defaultStyle = new Style({
+    fill: new Fill({
+      color: 'rgb(255,255,255,0)',
+    }),
+  });
+  const hoverStyle = new Style({
+    fill: new Fill({
+      color: 'rgb(172,223,200,0.3)',
+    }),
+    stroke: new Stroke({
+      color: 'rgb(0,174,102,0.4)',
+      width: 2,
+    }),
+  });
+  const regionSource = new VectorSource({
+    format: new GeoJSON(),
+    url: 'http://localhost:8080/geoserver/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Aregion&maxFeatures=50&outputFormat=application%2Fjson',
+  });
+  const regionLayer = new VectorLayer({
+    source: regionSource,
+    style: defaultStyle,
+  });
+  let currentRegionFeature;
+
   // 地图层级查询
   function MapLevelSearch() {
     const map = mapStore.GetMap;
-    mapMoveListener = map.on('moveend', async () => {
+    if (mapMoveEndListener) return;
+
+    mapMoveEndListener = map.on('moveend', async () => {
       const viewZoom = map.getView().getZoom();
-      if (viewZoom && viewZoom > 16) {
-        console.log('center', map.getView().getCenter());
-        const center = map.getView().getCenter();
-        if (center) {
-          const param: CircleData = {
-            longitude: center[0],
-            latitude: center[1],
-            radius: 0.01,
-          };
+      const center = map.getView().getCenter();
+      if (!viewZoom || !center) return;
+      // 地图层级自动查询
+      if (viewZoom > 15) {
+        if (regionLayerAdd) {
+          regionLayer.setOpacity(0);
+          regionOverlayLayer.setOpacity(0);
+        }
+        unByKey(pointMoveListener);
+        pointerMoveListenerAdded = false;
+        // console.log('center', map.getView().getCenter());
+        let param: CircleData = {
+          longitude: center[0],
+          latitude: center[1],
+          radius: 0.01,
+        };
+        // 避免频繁发起请求，添加防抖功能
+        debounce(async () => {
+          param = Searchfilter(param);
           const response = await getPlotsInCircle(param);
           AddOverlay(map as Map, response.data.plots);
+          clickPlotListener = GetHouseByClickPlot(map as Map);
+        }, 1000)(); // 1000ms 防抖延迟
+      }
+      // 行政区概括查询
+      if (viewZoom > 10 && viewZoom < 14) {
+        if (!regionLayerAdd) {
+          map.addLayer(regionLayer);
+          regionLayer.setStyle(defaultStyle);
+          regionLayerAdd = true;
+        }
+        regionLayer.setOpacity(1);
+        regionOverlayLayer.setOpacity(1);
+        // 鼠标移动事件回调函数
+        const pointMoveHandle = (event) => {
+          let newFeature;
+          map.forEachFeatureAtPixel(event.pixel, (feature) => {
+            newFeature = feature;
+            return; // 找到第一个就停止遍历
+          });
+          if (currentRegionFeature !== newFeature) {
+            if (currentRegionFeature) {
+              currentRegionFeature.setStyle(defaultStyle);
+            }
+            if (newFeature) {
+              newFeature.setStyle(hoverStyle);
+            }
+            currentRegionFeature = newFeature;
+          }
+
+          // map.forEachFeatureAtPixel(event.pixel, (feature) => {
+          //   console.log('feature', feature);
+          //   // 还原上一要素样式为透明状态
+          //   if (currentRegionFeature) {
+          //     const currentFill = currentRegionFeature.getStyle()?.getFill()?.getColor();
+          //     const featureFill = feature.getStyle()?.getFill()?.getColor();
+          //     if (currentFill == featureFill) return;
+          //     currentRegionFeature.setStyle(defaultStyle);
+          //     console.log('切换style');
+          //   }
+          //   // 设置当前要素样式
+          //   feature.setStyle(hoverStyle);
+          //   currentRegionFeature = feature;
+          // });
+        };
+        // 渲染鼠标悬停区域region图层
+        if (!pointerMoveListenerAdded) {
+          pointMoveListener = map.on('pointermove', pointMoveHandle);
+          pointerMoveListenerAdded = true;
+        }
+        // 加载regionoverlay租房数量信息
+        if (regionOverlayLayerAdd === false) {
+          // 渲染区域房源概要信息overlay ,等待regionSource数据加载完成
+          regionSource.once('featuresloadend', function () {
+            const properties = regionSource.getFeatures().map((feature) => {
+              return feature.getProperties();
+            });
+            const features = properties.map((property) => {
+              return new Feature({
+                geometry: new Point([property.wgs84_lng, property.wgs84_lat]),
+                properties: {
+                  name: property.name,
+                  house_count: property.house_count,
+                },
+              });
+            });
+            regionOverlaySource.clear();
+            regionOverlaySource.addFeatures(features);
+            map.addLayer(regionOverlayLayer);
+            regionOverlayLayerAdd = true;
+          });
         }
       }
     });
+  }
+  function MapLevelSearchClear() {
+    unByKey(pointMoveListener);
+    pointMoveListener = null;
+    unByKey(mapMoveEndListener);
+    mapMoveEndListener = null;
+    unByKey(clickPlotListener);
+    clickPlotListener = null;
+    pointerMoveListenerAdded = false;
+    // 调节图层透明度为0
+    regionLayer.setOpacity(0);
+    regionOverlayLayer.setOpacity(0);
   }
 
   // popup图标绘制
@@ -710,7 +1001,6 @@
 
     if (overLaySourceAdd === false) {
       map.addLayer(overLayLayer);
-      // map.addLayer(clusterLayer);
       overLaySourceAdd = true;
     }
   }
@@ -860,11 +1150,13 @@
     if (newValue === -1) {
       MapLevelSearch();
     }
+    if (oldValue === -1 && newValue !== -1) {
+      MapLevelSearchClear();
+    }
   });
 
   onMounted(() => {
     mapStore.InitOpenlayers('container');
-
     MapLevelSearch();
   });
 </script>
@@ -899,16 +1191,15 @@
     .left {
       position: absolute;
       width: 350px;
-      top: 30px;
+      top: 60px;
       left: 20px;
       z-index: 999;
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
-      background-color: #de9c9c;
       .left-item {
         background-color: #fff;
-        width: 90%;
+        width: 100%;
       }
       .left-list-title {
         height: 50px;
@@ -918,6 +1209,35 @@
       }
       .left-list {
         padding: 20px;
+        height: 600px;
+      }
+    }
+    .middle {
+      position: absolute;
+      top: 60px;
+      left: 450px;
+      z-index: 999;
+      width: 300px;
+
+      .middle-item {
+        position: relative;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+      }
+      .middle-item-leaseform {
+        width: 100%;
+        background-color: #fff;
+        padding-top: 10px;
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+      .middle-item-priceform {
+        width: 100%;
+        background-color: #fff;
+        padding-top: 10px;
+        padding-left: 20px;
+        padding-right: 20px;
       }
     }
   }
