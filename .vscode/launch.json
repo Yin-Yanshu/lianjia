@@ -7,7 +7,11 @@
       "name": "Launch Chrome",
       "url": "http://localhost:3100",
       "webRoot": "${workspaceFolder}/src",
-      "sourceMaps": true
+      "sourceMaps": true,
+      "runtimeExecutable": "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
+      "sourceMapPathOverrides": {
+        "webpack:///./*": "${webRoot}/*"
+      }
     }
   ]
 }

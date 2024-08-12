@@ -42,7 +42,6 @@
     "@zxcvbn-ts/core": "^1.0.0-beta.0",
     "ant-design-vue": "2.2.8",
     "axios": "^0.24.0",
-    "cesium": "^1.118.2",
     "crypto-js": "^4.1.1",
     "echarts": "^5.2.2",
     "lodash-es": "^4.17.21",

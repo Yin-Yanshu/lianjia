@@ -81,7 +81,8 @@
               </ListItemMeta>
 
               <template #extra>
-                <img width="60" alt="logo" src="public/resource/img/logo.png" />
+                <!-- <img width="60" alt="logo" src="public/resource/img/logo.png" /> -->
+                <img width="60" alt="logo" src="../../assets/images/lianjia_logo.png" />
               </template>
             </ListItem>
           </template>
@@ -116,7 +117,7 @@
   import { CaretDownOutlined } from '@ant-design/icons-vue';
   import { useMapStore } from '../../store/modules/map';
   import gaodePromise from '../../utils/gaode';
-  import { Point, Polygon } from 'ol/geom';
+  import { MultiPolygon, Point, Polygon } from 'ol/geom';
   import Feature from 'ol/Feature.js';
   import {
     getPlotsInPolygon,
@@ -177,8 +178,9 @@
   // }
 
   /**
-   * @param map
    * Select控件获取要素信息
+   * @param map
+   * 传入地图，获取传入地图要素
    */
   // function GetFeature(map: Map) {
   //   const select = new Select();
@@ -244,7 +246,10 @@
   let option = {} as OptionData;
   const lease_typeCheck = ref([]);
   const priceSliderValue = ref<[number, number]>([2000, 5000]);
-  // 查询参数过滤策略控制器
+  /**
+   * 查询参数过滤策略控制器
+   * @param index 传入属性过滤参数，不同index启用不同过滤参数
+   */
   function SearchfilterHandle(index) {
     switch (index) {
       //  确认关闭属性过滤
@@ -279,7 +284,11 @@
         break;
     }
   }
-  // 查询参数过滤器
+  /**
+   * 查询参数过滤器
+   * @param param 原始查询参数
+   * @returns 返回增加属性限制的查询参数
+   */
   function Searchfilter(param) {
     // 过滤选项option为空，返回param
     if (Object.keys(option).length == 0) return param;
@@ -369,6 +378,7 @@
   let clickPlotListener;
   let mapMoveEndListener;
   let pointMoveListener;
+  let doubleClickListener;
   // 监听器清除函数，可选保留监听器或全部清除 不提供参数exceptListener则全部清除
   function ListenerClear(exceptListener?) {
     // 如果subwaySearchListener存在且subwaySearchListener不等于保留监听器则unByKey
@@ -443,9 +453,9 @@
     // 本项目规范，一定需要定义但未使用的变量采用_前缀
     subwaySearchListener = circleDraw.on('drawend', async (_event) => {
       let param: CircleData = {
-        longitude: 0,
-        latitude: 0,
-        radius: 0.01,
+        latitude: null,
+        longitude: null,
+        radius: null,
       };
       param.longitude = center[0];
       param.latitude = center[1];
@@ -665,7 +675,8 @@
               offsetX: 8,
             }),
             image: new Icon({
-              src: 'src/assets/svg/overlay-bg-click.svg',
+              // src: 'src/assets/svg/overlay-bg-click.svg',
+              src: '/resource/svg/overlay-bg-click.svg',
               anchor: [0.5, 20],
               anchorXUnits: 'fraction',
               anchorYUnits: 'pixels',
@@ -791,7 +802,8 @@
           offsetX: 8,
         }),
         image: new Icon({
-          src: 'src/assets/svg/overlay-bg.svg',
+          // src: 'src/assets/svg/overlay-bg.svg',
+          src: '/resource/svg/overlay-bg.svg',
           anchor: [0.5, 20],
           anchorXUnits: 'fraction',
           anchorYUnits: 'pixels',
@@ -816,8 +828,10 @@
   });
   const regionSource = new VectorSource({
     format: new GeoJSON(),
+    // url: 'http://localhost:8080/geoserver/lianjia/gwc/demo/lianjia:region?gridSet=EPSG:4326&format=application/json;type=geojson',
     url: 'http://localhost:8080/geoserver/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Aregion&maxFeatures=50&outputFormat=application%2Fjson',
   });
+  // 如想使用矢量切片方式加载region数据需使用VectorTile图层类和VectorTile数据源类并编写切片方法
   const regionLayer = new VectorLayer({
     source: regionSource,
     style: defaultStyle,
@@ -840,6 +854,7 @@
           regionOverlayLayer.setOpacity(0);
         }
         unByKey(pointMoveListener);
+        unByKey(doubleClickListener);
         pointerMoveListenerAdded = false;
         // console.log('center', map.getView().getCenter());
         let param: CircleData = {
@@ -896,9 +911,25 @@
           //   currentRegionFeature = feature;
           // });
         };
+        // 鼠标双击事件回调函数，平移至所选多边形中心点
+        const doubleClickHandle = (event) => {
+          const features = map.getFeaturesAtPixel(event.pixel);
+          if (!features || features.length === 0) return;
+          const feature = features[0];
+          const polygonGeometry = feature.getGeometry();
+          if (polygonGeometry instanceof MultiPolygon) {
+            const centerPoint = polygonGeometry.getInteriorPoints();
+            const centerCoordinates = centerPoint.getCoordinates()[0];
+            map.getView().animate({
+              center: [centerCoordinates[0], centerCoordinates[1]],
+              duration: 1000,
+            });
+          }
+        };
         // 渲染鼠标悬停区域region图层
         if (!pointerMoveListenerAdded) {
           pointMoveListener = map.on('pointermove', pointMoveHandle);
+          doubleClickListener = map.on('dblclick', doubleClickHandle);
           pointerMoveListenerAdded = true;
         }
         // 加载regionoverlay租房数量信息
@@ -928,6 +959,7 @@
   }
   function MapLevelSearchClear() {
     unByKey(pointMoveListener);
+    unByKey(doubleClickListener);
     pointMoveListener = null;
     unByKey(mapMoveEndListener);
     mapMoveEndListener = null;
@@ -941,7 +973,7 @@
 
   // popup图标绘制
   let overLaySourceAdd = false;
-  const overlayFeatureArray = [];
+  let overlayFeatureArray = [];
   const overLaySource = new VectorSource();
   const overLayLayer = new VectorLayer({
     source: overLaySource,
@@ -971,7 +1003,8 @@
         offsetX: 8,
       }),
       image: new Icon({
-        src: 'src/assets/svg/overlay-bg.svg',
+        // src: 'src/assets/svg/overlay-bg.svg',
+        src: '/resource/svg/overlay-bg.svg',
         anchor: [0.5, 20],
         anchorXUnits: 'fraction',
         anchorYUnits: 'pixels',
@@ -979,9 +1012,13 @@
       }),
     });
   }
+  /**
+   * 添加overlay图层内容
+   * @param map 添加要素至地图
+   * @param data feature数据
+   */
   function AddOverlay(map: Map, data) {
-    overlayFeatureArray.length = 0;
-    data.forEach((element) => {
+    overlayFeatureArray = data.map((element) => {
       let feature = new Feature({
         geometry: new Point([element.wgs84_lng, element.wgs84_lat]),
       });
@@ -989,8 +1026,7 @@
         count: element.count,
         plot: element.plot,
       });
-
-      overlayFeatureArray.push(feature as never);
+      return feature;
     });
 
     if (overLaySource) {

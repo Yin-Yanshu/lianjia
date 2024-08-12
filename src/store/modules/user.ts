@@ -95,6 +95,7 @@ export const useUserStore = defineStore({
 
         // save token
         this.setToken(token);
+        // this.setToken('faketoken');
         return this.afterLoginAction(goHome);
       } catch (error) {
         return Promise.reject(error);

@@ -22,9 +22,9 @@ export interface PolygonListData {
 }
 
 export interface CircleData {
-  latitude: number;
-  longitude: number;
-  radius: number;
+  latitude: number | null;
+  longitude: number | null;
+  radius: number | null;
   option?: OptionData;
 }
 

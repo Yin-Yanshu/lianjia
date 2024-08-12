@@ -5,7 +5,7 @@ import { XYZ } from 'ol/source';
 import VectorLayer from 'ol/layer/Vector';
 import VectorSource from 'ol/source/Vector';
 import { Fill, Stroke, Style } from 'ol/style';
-import { Draw } from 'ol/interaction';
+import { Draw, defaults } from 'ol/interaction';
 import BaseLayer from 'ol/layer/Base';
 
 interface OpenlayerState {
@@ -87,6 +87,9 @@ export const useMapStore = defineStore({
         layers: [gaodeMapLayer],
         target: container,
         controls: [],
+        interactions: defaults({
+          doubleClickZoom: false,
+        }),
       });
       this.map = map;
       this.drawerHandler = new Drawer(map);
