@@ -46,7 +46,7 @@
     opacity: 0.5,
   });
 
-  // 添加热力图
+  // INFO 添加热力图
   async function AddHeatMap(map: Map, getDataFunction: Function, params = null) {
     const response = await getDataFunction(params);
     let features: Feature<Point>[];
@@ -98,7 +98,7 @@
   // mapstore获取全局唯一map
   let map;
   onMounted(() => {
-    mapStore.InitOpenlayers('map-container');
+    mapStore.initOpenlayers('map-container');
     map = mapStore.GetMap;
     // AddHeatMap(map, getCurrentHouseHeatMap);
     const params: HeatMapTimeData = {

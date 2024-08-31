@@ -72,7 +72,7 @@ export const useMapStore = defineStore({
     },
   },
   actions: {
-    InitOpenlayers(container: string) {
+    initOpenlayers(container: string) {
       const gaodeMapLayer = new TileLayer({
         source: new XYZ({
           url: 'http://wprd0{1-4}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}',
