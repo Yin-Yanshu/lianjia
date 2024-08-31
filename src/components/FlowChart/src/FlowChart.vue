@@ -82,7 +82,6 @@
         },
       );
 
-      // TODO
       // watch(
       //   () => appStore.getDarkMode,
       //   () => {

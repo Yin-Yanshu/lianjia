@@ -2,7 +2,7 @@
   <div id="container">
     <div class="right">
       <div class="right-item">
-        <Button class="search-button" @click="ActiveButtonHandle(0)">地铁线路查询</Button>
+        <Button class="search-button" @click="activeButtonHandle(0)">地铁线路查询</Button>
         <AntSelect v-if="activeButton === 0" v-model:value="activeLine" @change="SubwaySelect">
           <SelectOption v-for="option in subwaylines" :key="option.label" :value="option.label"
             >{{ option.label }}
@@ -10,10 +10,10 @@
         </AntSelect>
       </div>
       <div class="right-item">
-        <Button class="search-button" @click="ActiveButtonHandle(1)">多边形查询</Button>
+        <Button class="search-button" @click="activeButtonHandle(1)">多边形查询</Button>
       </div>
       <div class="right-item">
-        <Button class="search-button" @click="ActiveButtonHandle(2)">可达性查询</Button>
+        <Button class="search-button" @click="activeButtonHandle(2)">可达性查询</Button>
         <div v-if="activeButton == 2" class="slider-container">
           <Slider v-model:value="arriveTime" :min="10" :max="45" vertical />
         </div>
@@ -21,11 +21,12 @@
     </div>
     <div class="middle">
       <div class="middle-item">
+        <!-- TODO 样式调整 -->
         <Input v-model:value="placeInfo.name" @onBlur="inputBlurHandler" />
         <Button @click="placeSearch">搜索</Button>
-        <Button @click="PropertiesActiveButtonHandle(0)">方式</Button>
-        <Button @click="PropertiesActiveButtonHandle(1)">租金</Button>
-        <Button @click="SearchfilterHandle(0)">清空筛选</Button>
+        <Button @click="propertiesActiveButtonHandle(0)">方式</Button>
+        <Button @click="propertiesActiveButtonHandle(1)">租金</Button>
+        <Button @click="searchfilterHandle(0)">清空筛选</Button>
       </div>
       <div class="middle-item" v-if="propertyFromShow === 0">
         <Form class="middle-item-leaseform">
@@ -42,8 +43,8 @@
             </CheckboxGroup>
           </FormItem>
           <FormItem>
-            <Button @click="SearchfilterHandle(-2)">重置</Button>
-            <Button @click="SearchfilterHandle(2)">确认</Button>
+            <Button @click="searchfilterHandle(-2)">重置</Button>
+            <Button @click="searchfilterHandle(2)">确认</Button>
           </FormItem>
         </Form>
       </div>
@@ -53,8 +54,8 @@
             <Slider v-model:value="priceSliderValue" range :min="0" :max="9000" />
           </FormItem>
           <FormItem>
-            <Button @click="SearchfilterHandle(-1)">重置</Button>
-            <Button @click="SearchfilterHandle(1)">确认</Button>
+            <Button @click="searchfilterHandle(-1)">重置</Button>
+            <Button @click="searchfilterHandle(1)">确认</Button>
           </FormItem>
         </Form>
       </div>
@@ -114,7 +115,6 @@
       <img src="public/resource/svg/line.svg" /><span>{{ length }}km</span
       ><img src="public/resource/svg/line.svg" />
     </div>
-    <!-- <div class="down" ref="refLengthScale"></div> -->
   </div>
 </template>
 
@@ -193,16 +193,16 @@
    */
   const activeButton = ref(-1);
 
-  function ActiveButtonHandle(index) {
+  function activeButtonHandle(index) {
     switch (index) {
       case 0:
-        SubwaySearchHandle(index);
+        subwaySearchHandle(index);
         break;
       case 1:
-        PolygonSearchHandle(index);
+        polygonSearchHandle(index);
         break;
       case 2:
-        ArrivalRangeHandle(index);
+        arrivalRangeHandle(index);
         break;
     }
   }
@@ -210,7 +210,7 @@
   let currentPropertyButton = ref(-1);
 
   // 属性过滤器按钮选中控制
-  function PropertiesActiveButtonHandle(index) {
+  function propertiesActiveButtonHandle(index) {
     switch (index) {
       // 方式过滤
       case 0:
@@ -248,7 +248,7 @@
    * 查询参数过滤策略控制器
    * @param index 传入属性过滤参数，不同index启用不同过滤参数
    */
-  function SearchfilterHandle(index) {
+  function searchfilterHandle(index) {
     switch (index) {
       //  确认关闭属性过滤
       case 0:
@@ -288,7 +288,7 @@
    * @param param 原始查询参数
    * @returns 返回增加属性限制的查询参数
    */
-  function Searchfilter(param) {
+  function searchfilter(param) {
     // 过滤选项option为空，返回param
     if (Object.keys(option).length == 0) return param;
     if (!param.option) {
@@ -332,36 +332,36 @@
   const activeLine = ref('请选择地铁线路');
 
   // 激活地铁选择下拉栏
-  function SubwaySearchHandle(index) {
+  function subwaySearchHandle(index) {
     if (activeButton.value == index) {
-      SubwaySearchClear();
+      subwaySearchClear();
       activeButton.value = -1;
     } else {
       activeButton.value = 0;
     }
   }
 
-  // 选择地铁线路
+  // INFO 选择地铁线路
   function SubwaySelect() {
     switch (activeLine.value) {
       case '一号线':
-        AddWFS(map as Map, subwaylines.lineOne.url);
+        addWFS(map as Map, subwaylines.lineOne.url);
         break;
       case '二号线':
-        AddWFS(map as Map, subwaylines.lineTwo.url);
+        addWFS(map as Map, subwaylines.lineTwo.url);
         break;
       case '三号线':
-        AddWFS(map as Map, subwaylines.lineThree.url);
+        addWFS(map as Map, subwaylines.lineThree.url);
         break;
       case '四号线':
-        AddWFS(map as Map, subwaylines.lineFour.url);
+        addWFS(map as Map, subwaylines.lineFour.url);
         break;
       case '五号线':
-        AddWFS(map as Map, subwaylines.lineFive.url);
+        addWFS(map as Map, subwaylines.lineFive.url);
         break;
     }
     if (!isFirstCall) {
-      GetFeature(map as Map);
+      getFeature(map as Map);
       isFirstCall = true;
     }
   }
@@ -381,7 +381,7 @@
   let doubleClickListener;
 
   // 监听器清除函数，可选保留监听器或全部清除 不提供参数exceptListener则全部清除
-  function ListenerClear(exceptListener?) {
+  function listenerClear(exceptListener?) {
     // 如果subwaySearchListener存在且subwaySearchListener不等于保留监听器则unByKey
     if (subwaySearchListener && subwaySearchListener !== exceptListener) {
       unByKey(subwaySearchListener);
@@ -411,8 +411,8 @@
     }),
   });
 
-  function GetFeature(map: Map) {
-    ListenerClear();
+  function getFeature(map: Map) {
+    listenerClear();
 
     circleDraw = new Draw({
       source: new VectorSource(),
@@ -462,18 +462,18 @@
       param.longitude = center[0];
       param.latitude = center[1];
       param.radius = 0.01;
-      param = Searchfilter(param);
+      param = searchfilter(param);
       const response = await getPlotsInCircle(param);
       houseCount.value = response.data.plots.reduce((sum, plot) => sum + plot.count, 0);
-      AddOverlay(map, response.data.plots);
+      addOverlay(map, response.data.plots);
       houseList.value = [...response.data.houseList];
       listShow.value = true;
-      GetHouseByClickPlot(map as Map);
+      getHouseByClickPlot(map as Map);
     });
   }
 
   // 地铁查询清除
-  function SubwaySearchClear() {
+  function subwaySearchClear() {
     // if (snap) {
     //   let result = map.removeInteraction(snap);
     //   // snap = null;
@@ -524,7 +524,7 @@
     }),
   });
 
-  function AddWFS(map: Map, url) {
+  function addWFS(map: Map, url) {
     if (subwayVectorSource) {
       subwayVectorSource.clear();
     }
@@ -549,20 +549,21 @@
   const houseList = ref([] as any[]);
   let polygonDraw;
 
-  function PolygonSearchHandle(index) {
+  function polygonSearchHandle(index) {
     if (activeButton.value == index) {
-      PolygonSearchClear();
+      polygonSearchClear();
       listShow.value = false;
       activeButton.value = -1;
     } else {
-      PolygonSearch();
+      polygonSearch();
       activeButton.value = 1;
     }
   }
 
-  function PolygonSearch() {
+  // INFO 多边形搜索功能
+  function polygonSearch() {
     // 清除所有监听器
-    ListenerClear();
+    listenerClear();
 
     polygonDraw = new Draw({
       source: new VectorSource(),
@@ -612,18 +613,18 @@
         polygon: polygon,
       };
       // 参数过滤，添加查询限制条件
-      param = Searchfilter(param);
+      param = searchfilter(param);
       const response = await getPlotsInPolygon(param);
       houseCount.value = response.data.plots.reduce((sum, plot) => sum + plot.count, 0);
-      AddOverlay(map as Map, response.data.plots);
+      addOverlay(map as Map, response.data.plots);
       houseList.value = [...response.data.houseList];
       listShow.value = true;
       // 获取小区信息详细房屋信息
-      clickPlotListener = GetHouseByClickPlot(map as Map);
+      clickPlotListener = getHouseByClickPlot(map as Map);
     });
   }
 
-  function PolygonSearchClear() {
+  function polygonSearchClear() {
     map.getInteractions().forEach((interaction) => {
       if (interaction instanceof Draw) {
         let draw = map.removeInteraction(interaction);
@@ -638,7 +639,7 @@
   let currentOverlayPoint;
 
   // 点击小区overlay获取详细租房信息
-  function GetHouseByClickPlot(map: Map) {
+  function getHouseByClickPlot(map: Map) {
     if (clickPlotListener) {
       return;
     }
@@ -663,7 +664,7 @@
         let param: PlotData = {
           plot: property.plot,
         };
-        param = Searchfilter(param);
+        param = searchfilter(param);
         const response = await getHouseInPlots(param);
         houseList.value = [...response.data];
         listShow.value = true;
@@ -691,21 +692,22 @@
     style: drawStyle,
   });
 
-  function ArrivalRangeHandle(index) {
+  function arrivalRangeHandle(index) {
     if (activeButton.value == index) {
       drawVectorSource.clear();
       activeButton.value = -1;
       unByKey(arrivalSearchListener);
       arrivalSearchListener = null;
     } else {
-      ArrivalRangeSearch();
+      arrivalRangeSearch();
       activeButton.value = 2;
     }
   }
 
-  function ArrivalRangeSearch() {
+  // INFO 可达范围搜索功能
+  function arrivalRangeSearch() {
     // 清除所有监听函数
-    ListenerClear();
+    listenerClear();
     arrivalSearchListener = map.on('click', (event) => {
       // 处理思路：判断获取到要素是否含有小区overlay要素，未找到则调用高德api
       let pixelCoordinate = map.getCoordinateFromPixel(event.pixel);
@@ -748,13 +750,13 @@
               polygonList.push(polygonParam);
             });
             // 查询参数过滤器
-            polygonListParam = Searchfilter(polygonListParam);
+            polygonListParam = searchfilter(polygonListParam);
             const response = await getPlotsInPolygonList(polygonListParam);
             houseCount.value = response.data.plots.reduce((sum, plot) => sum + plot.count, 0);
-            AddOverlay(map as Map, response.data.plots);
+            addOverlay(map as Map, response.data.plots);
             houseList.value = [...response.data.houseList];
             listShow.value = true;
-            clickPlotListener = GetHouseByClickPlot(map as Map);
+            clickPlotListener = getHouseByClickPlot(map as Map);
           },
           {
             policy: arriveOption.value,
@@ -837,8 +839,8 @@
 
   const houseCount = ref(0);
 
-  // 地图层级查询
-  function MapLevelSearch() {
+  // INFO 地图层级查询
+  function mapLevelSearch() {
     if (mapMoveEndListener) return;
 
     mapMoveEndListener = map.on('moveend', async () => {
@@ -862,11 +864,11 @@
         };
         // 避免频繁发起请求，添加防抖功能
         debounce(async () => {
-          param = Searchfilter(param);
+          param = searchfilter(param);
           const response = await getPlotsInCircle(param);
           houseCount.value = response.data.plots.reduce((sum, plot) => sum + plot.count, 0);
-          AddOverlay(map as Map, response.data.plots);
-          clickPlotListener = GetHouseByClickPlot(map as Map);
+          addOverlay(map as Map, response.data.plots);
+          clickPlotListener = getHouseByClickPlot(map as Map);
           // houseList.value = [...response.data.houseList];
           // listShow.value = true;
         }, 1000)(); // 1000ms 防抖延迟
@@ -959,7 +961,7 @@
     });
   }
 
-  function MapLevelSearchClear() {
+  function mapLevelSearchClear() {
     unByKey(pointMoveListener);
     unByKey(doubleClickListener);
     pointMoveListener = null;
@@ -1055,7 +1057,7 @@
    * @param map 添加要素至地图
    * @param data feature数据
    */
-  function AddOverlay(map: Map, data) {
+  function addOverlay(map: Map, data) {
     overlayFeatureArray = data.map((element) => {
       let feature = new Feature({
         geometry: new Point([element.wgs84_lng, element.wgs84_lat]),
@@ -1107,6 +1109,7 @@
     }
   });
 
+  // INFO 地名自动补全
   const placeInfoList = ref();
   function autoCompleteSearch(name) {
     autoCompletePromise.then((autoComplete) => {
@@ -1138,11 +1141,11 @@
       radius: 0.01,
     };
     debounce(async () => {
-      param = Searchfilter(param);
+      param = searchfilter(param);
       const response = await getPlotsInCircle(param);
       houseCount.value = response.data.plots.reduce((sum, plot) => sum + plot.count, 0);
-      AddOverlay(map as Map, response.data.plots);
-      clickPlotListener = GetHouseByClickPlot(map as Map);
+      addOverlay(map as Map, response.data.plots);
+      clickPlotListener = getHouseByClickPlot(map as Map);
       houseList.value = [...response.data.houseList];
       listShow.value = true;
     }, 1000)();
@@ -1172,27 +1175,27 @@
   watch(activeButton, (newValue, oldValue) => {
     // 切换前激活地铁查询，切换后激活其他查询，且按钮不为停止状态
     if (oldValue === 0 && newValue !== 0 && newValue !== -1) {
-      SubwaySearchClear();
+      subwaySearchClear();
     }
     if (oldValue === 1 && newValue !== 1 && newValue !== -1) {
-      PolygonSearchClear();
+      polygonSearchClear();
     }
     if (oldValue === 2 && newValue !== 2 && newValue !== -1) {
       drawVectorSource.clear();
     }
     // 按钮为停止状态启动地图层级查询
     if (newValue === -1) {
-      MapLevelSearch();
+      mapLevelSearch();
     }
     if (oldValue === -1 && newValue !== -1) {
-      MapLevelSearchClear();
+      mapLevelSearchClear();
     }
   });
 
   onMounted(() => {
-    mapStore.InitOpenlayers('container');
+    mapStore.initOpenlayers('container');
     map = mapStore.GetMap;
-    MapLevelSearch();
+    mapLevelSearch();
     addLengthScaleTest(map);
   });
 </script>

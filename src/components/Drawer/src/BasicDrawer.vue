@@ -97,7 +97,6 @@
           opt.wrapClassName = wrapClassName ? `${wrapClassName} ${detailCls}` : detailCls;
 
           if (!getContainer) {
-            // TODO type error?
             opt.getContainer = `.${prefixVar}-layout-content` as any;
           }
         }

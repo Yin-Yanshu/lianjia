@@ -83,7 +83,6 @@ export function useForm(props?: Props): UseFormReturnType {
       unref(formRef)?.removeSchemaByFiled(field);
     },
 
-    // TODO promisify
     getFieldsValue: <T>() => {
       return unref(formRef)?.getFieldsValue() as T;
     },

@@ -110,7 +110,6 @@ export function useTableScroll(
         const offsetHeight = paginationEl.offsetHeight;
         paginationHeight += offsetHeight || 0;
       } else {
-        // TODO First fix 24
         paginationHeight += 24;
       }
     } else {
@@ -159,7 +158,6 @@ export function useTableScroll(
       width += 60;
     }
 
-    // TODO props ?? 0;
     const NORMAL_WIDTH = 150;
 
     const columns = unref(columnsRef).filter((item) => !item.defaultHidden);
