@@ -139,8 +139,8 @@
   import Feature from 'ol/Feature.js';
   import { unByKey } from 'ol/Observable';
   import GeoJSON from 'ol/format/GeoJSON';
-  import { MultiPolygon, Point, Polygon } from 'ol/geom';
-  import { Draw, Snap } from 'ol/interaction';
+  import { MultiPolygon, Point, Polygon, LineString, Geometry } from 'ol/geom';
+  import { Draw, Interaction, Snap } from 'ol/interaction';
   import VectorLayer from 'ol/layer/Vector';
   import 'ol/ol.css';
   import VectorSource from 'ol/source/Vector';
@@ -368,8 +368,8 @@
 
   // 获取图层要素信息
   let subwayLayerAdd = false;
-  let circleDraw;
-  let snap;
+  let circleDraw: Interaction;
+  let snap: Interaction;
 
   // 监听器
   let subwaySearchListener;
@@ -379,9 +379,10 @@
   let mapMoveEndListener;
   let pointMoveListener;
   let doubleClickListener;
+  let pathPlaningListener;
 
   // 监听器清除函数，可选保留监听器或全部清除 不提供参数exceptListener则全部清除
-  function listenerClear(exceptListener?) {
+  function listenerClear(exceptListener = null) {
     // 如果subwaySearchListener存在且subwaySearchListener不等于保留监听器则unByKey
     if (subwaySearchListener && subwaySearchListener !== exceptListener) {
       unByKey(subwaySearchListener);
@@ -398,6 +399,10 @@
     if (mapMoveEndListener && mapMoveEndListener !== exceptListener) {
       unByKey(mapMoveEndListener);
       mapMoveEndListener = null;
+    }
+    if (pathPlaningListener && pathPlaningListener !== exceptListener) {
+      unByKey(pathPlaningListener);
+      pathPlaningListener = null;
     }
   }
 
@@ -524,7 +529,7 @@
     }),
   });
 
-  function addWFS(map: Map, url) {
+  function addWFS(map: Map, url: string) {
     if (subwayVectorSource) {
       subwayVectorSource.clear();
     }
@@ -577,7 +582,7 @@
           width: 2,
         }),
       }),
-      // condition接受boolen，函数返回true绘制当前点
+      // condition接受boolean，函数返回true绘制当前点
       condition: (event) => {
         let features = map.getFeaturesAtPixel(event.pixel);
         if (features.length == 0) {
@@ -977,7 +982,7 @@
 
   // popup图标绘制
   let overLaySourceAdd = false;
-  let overlayFeatureArray = [];
+  let overlayFeatureArray = [] as Feature<Point>[];
   const overLaySource = new VectorSource();
   const overLayLayer = new VectorLayer({
     source: overLaySource,
@@ -1057,7 +1062,7 @@
    * @param map 添加要素至地图
    * @param data feature数据
    */
-  function addOverlay(map: Map, data) {
+  function addOverlay(map: Map, data: any[]) {
     overlayFeatureArray = data.map((element) => {
       let feature = new Feature({
         geometry: new Point([element.wgs84_lng, element.wgs84_lat]),
@@ -1089,10 +1094,10 @@
     });
   }
 
-  const searchListShow = ref(true);
+  const searchListShow = ref(false);
 
   function inputBlurHandler() {
-    searchListShow.value == true ? false : true;
+    searchListShow.value == false ? true : false;
   }
 
   const { autoCompletePromise } = initGaoDe();
@@ -1171,6 +1176,215 @@
     });
   }
 
+  let arrowPoints: Feature<Geometry>[];
+  let startPoint = ref([121.468768, 31.215104]);
+  let endPoint = ref([121.486128, 31.211733]);
+  const subwayLineColors = {
+    地铁1号线: 'rgb(234,11,42)',
+    地铁2号线: 'rgb(148,212,11)',
+    地铁3号线: 'rgb(248,208,0)',
+    地铁4号线: 'rgb(96,38,158)',
+    地铁5号线: 'rgb(147,76,154)',
+    地铁6号线: 'rgb(147,76,154)',
+    地铁7号线: 'rgb(147,76,154)',
+    地铁8号线: 'rgb(147,76,154)',
+    地铁9号线: 'rgb(147,76,154)',
+    地铁10号线: 'rgb(147,76,154)',
+    地铁11号线: 'rgb(120,34,47)',
+    地铁12号线: 'rgb(0,121,96)',
+    地铁13号线: 'rgb(240,149,206)',
+    地铁14号线: 'rgb(129,119,4)',
+    地铁15号线: 'rgb(189,166,133)',
+    地铁16号线: 'rgb(42,210,197)',
+    地铁17号线: 'rgb(181,119,108)',
+    地铁18号线: 'rgb(214,163,97)',
+    default: 'rgb(234,11,42)',
+  };
+  const defaultPathStyle = new Style({
+    stroke: new Stroke({
+      color: 'rgb(39,117,72)',
+      width: 20,
+    }),
+  });
+  const walkStyle = new Style({
+    stroke: new Stroke({
+      color: 'rgb(10,14,12,0.5)',
+      width: 10,
+    }),
+  });
+  const busStyle = new Style({
+    stroke: new Stroke({
+      color: 'rgb(39,117,72)',
+      width: 20,
+    }),
+  });
+  const subwayWrapperStyle = new Style({
+    stroke: new Stroke({
+      color: 'rgb(10,14,12,0.9)',
+      width: 24,
+    }),
+  });
+  // NOTE 缓存实例对象方法 缓存subway样式，减少重复new Style
+  const plainingStyleCache = {};
+  function getPlainingStyle(line) {
+    if (plainingStyleCache[line]) {
+      return plainingStyleCache[line];
+    }
+    const style = new Style({
+      stroke: new Stroke({
+        color: subwayLineColors[line] || subwayLineColors['default'],
+        width: 20,
+      }),
+    });
+    plainingStyleCache[line] = style;
+    return style;
+  }
+  function planingUpperStyle(feature) {
+    const transit_mode = feature.get('transit_mode');
+    switch (transit_mode) {
+      case 'WALK':
+        return walkStyle;
+      case 'SUBWAY':
+        const line = feature.get('line');
+        return getPlainingStyle(line);
+      case 'BUS':
+        return busStyle;
+      default:
+        return defaultPathStyle;
+    }
+  }
+  function planingDownStyle(feature) {
+    const transit_mode = feature.get('transit_mode');
+    switch (transit_mode) {
+      case 'SUBWAY':
+        return subwayWrapperStyle;
+    }
+  }
+  function isPointOnLine(point: number[], lineStart: number[], lineEnd: number[]): boolean {
+    const [xPoint, yPoint] = point;
+    const [xStart, yStart] = lineStart;
+    const [xEnd, yEnd] = lineEnd;
+
+    // 边界框检查，快速排除位于直线边框外的点
+    // BUG 为什么启用边框检查后就能修正箭头指向错误的问题
+    if (
+      xPoint < Math.min(xStart, xEnd) ||
+      xPoint > Math.max(xStart, xEnd) ||
+      yPoint < Math.min(yStart, yEnd) ||
+      yPoint > Math.max(yStart, yEnd)
+    ) {
+      return false;
+    }
+
+    // 如果起点和终点相同，则没有定义直线，返回false
+    if (xStart === xEnd && yStart === yEnd) return false;
+
+    // 计算向量p1p和p1p2的行列式（在二维中类似于叉积）
+    // 行列式 = (x2-x1)*(y-y1) - (y2-y1)*(x-x1)
+    const isOnLine = (xEnd - xStart) * (yPoint - yStart) - (yEnd - yStart) * (xPoint - xStart);
+
+    return Math.abs(isOnLine) < 1e-7;
+  }
+  let isPathPlaningSourceAdd = false;
+  const pathPlaningSource = new VectorSource();
+  const pathPlaningUpperLayer = new VectorLayer({
+    source: pathPlaningSource,
+    style: planingUpperStyle,
+  });
+  const pathPlaningDownLayer = new VectorLayer({
+    source: pathPlaningSource,
+    style: planingDownStyle,
+  });
+  const pathPlaningArrowSource = new VectorSource();
+  const pathPlaningArrowLayer = new VectorLayer({
+    source: pathPlaningArrowSource,
+    style: (feature) => {
+      let coordinates = feature.getGeometry().getCoordinates();
+      let returnStyle;
+      let rotation;
+      lineFeatureList.forEach((lineFeature) => {
+        lineFeature.getGeometry()?.forEachSegment((start, end) => {
+          if (isPointOnLine(coordinates, start, end)) {
+            let dx = end[0] - start[0];
+            let dy = end[1] - start[1];
+            rotation = Math.atan(dx / dy);
+            rotation = dy > 0 ? rotation : Math.PI + rotation;
+            returnStyle = new Style({
+              image: new Icon({
+                src: 'public/resource/svg/path-arrow.svg',
+                imgSize: [200, 200],
+                scale: [0.1, 0.1],
+                rotation: rotation,
+              }),
+            });
+          }
+        });
+      });
+      return returnStyle;
+    },
+  });
+  // INFO 路径规划
+  let lineFeatureList;
+  const { pathPlaningPromise } = initGaoDe();
+  function pathPlaningTest() {
+    pathPlaningPromise.then((pathPlaning) => {
+      pathPlaning.search(startPoint.value, endPoint.value, (_status, result) => {
+        // console.log('result', result);
+        lineFeatureList = result.plans[0].segments.map((segment) => {
+          const segmentLine = segment.transit.path.map((element) => {
+            return [element.lng, element.lat];
+          });
+          const segmentLineFeature = new Feature({
+            geometry: new LineString(segmentLine),
+          });
+          const instruction = segment.instruction;
+          // 匹配描述信息中地铁线路信息
+          let match = instruction.match(/地铁\d+号线/);
+          if (match) segmentLineFeature.set('line', match[0]);
+          segmentLineFeature.set('transit_mode', segment.transit_mode);
+          return segmentLineFeature;
+        });
+
+        // 计算箭头数量
+        calculateArrowPoints(lineFeatureList);
+
+        pathPlaningSource.clear();
+        pathPlaningSource.addFeatures(lineFeatureList);
+
+        if (!isPathPlaningSourceAdd) {
+          map.addLayer(pathPlaningDownLayer);
+          map.addLayer(pathPlaningUpperLayer);
+          map.addLayer(pathPlaningArrowLayer);
+          isPathPlaningSourceAdd = true;
+        }
+      });
+    });
+    // 更新比例尺时更新箭头数量和指向
+    listenerClear(pathPlaningListener);
+    pathPlaningListener = map.getView().on('change:resolution', () => {
+      // 计算箭头数量
+      calculateArrowPoints(lineFeatureList);
+    });
+  }
+  function calculateArrowPoints(lineFeatureList) {
+    arrowPoints = [];
+    lineFeatureList.forEach((lineFeature) => {
+      let arrowNumber = Math.ceil(
+        lineFeature.getGeometry().getLength() / map.getView().getResolution() / 100,
+      );
+      for (var i = 0; i <= arrowNumber; i++) {
+        let fracPosition = i / arrowNumber;
+        if (fracPosition > 1) fracPosition -= 1;
+        let arrowPoint = new Feature(
+          new Point(lineFeature.getGeometry().getCoordinateAt(fracPosition)),
+        );
+        arrowPoints.push(arrowPoint as never);
+      }
+    });
+    pathPlaningArrowSource.clear();
+    pathPlaningArrowSource.addFeatures(arrowPoints);
+  }
+
   // 监听按钮在激活状态下的切换
   watch(activeButton, (newValue, oldValue) => {
     // 切换前激活地铁查询，切换后激活其他查询，且按钮不为停止状态
@@ -1197,6 +1411,7 @@
     map = mapStore.GetMap;
     mapLevelSearch();
     addLengthScaleTest(map);
+    pathPlaningTest();
   });
 </script>
 
