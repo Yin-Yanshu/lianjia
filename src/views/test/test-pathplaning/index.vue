@@ -51,7 +51,7 @@
   const busStyle = new Style({
     stroke: new Stroke({
       color: 'rgb(39,117,72)',
-      width: 20,
+      width: 15,
     }),
   });
   const subwayWrapperStyle = new Style({
@@ -124,6 +124,7 @@
   let isPathPlaningSourceAdd = false;
   const pathPlaningSource = new VectorSource();
   const pathPlaningArrowSource = new VectorSource();
+  const pathPlaningPopupSource = new VectorSource();
   const pathPlaningUpperLayer = new VectorLayer({
     source: pathPlaningSource,
     style: planingUpperStyle,
@@ -132,6 +133,63 @@
     source: pathPlaningSource,
     style: planingDownStyle,
   });
+  const startIcon = new Style({
+    image: new Icon({
+      src: 'public/resource/svg/start-point.svg',
+      imgSize: [200, 200],
+      scale: [0.2, 0.2],
+    }),
+  });
+  const endIcon = new Style({
+    image: new Icon({
+      src: 'public/resource/svg/end-point.svg',
+      imgSize: [200, 200],
+      scale: [0.2, 0.2],
+    }),
+  });
+  const busIcon = new Style({
+    image: new Icon({
+      src: 'public/resource/svg/bus.svg',
+      imgSize: [200, 200],
+      scale: [0.15, 0.15],
+    }),
+  });
+  const subwayIcon = new Style({
+    image: new Icon({
+      src: 'public/resource/svg/subway.svg',
+      imgSize: [200, 200],
+      scale: [0.2, 0.2],
+    }),
+  });
+  const pathPlaningPopupLayer = new VectorLayer({
+    source: pathPlaningPopupSource,
+    style: (feature) => {
+      const popupType = feature.getProperties().popupType;
+      if (!popupType) return null;
+      if (popupType === 'start') {
+        return startIcon;
+      }
+      if (popupType === 'end') {
+        return endIcon;
+      }
+      if (popupType === 'transit') {
+        const transit_mode = feature.getProperties().transit_mode;
+        if (!transit_mode) return null;
+        if (transit_mode === 'BUS') {
+          return busIcon;
+        }
+        if (transit_mode === 'SUBWAY') {
+          return subwayIcon;
+        }
+      }
+      return null;
+    },
+  });
+  const arrow_scale = {
+    BUS: [0.07, 0.07],
+    SUBWAY: [0.1, 0.1],
+    WALK: [0.05, 0.05],
+  };
   const pathPlaningArrowLayer = new VectorLayer({
     source: pathPlaningArrowSource,
     style: (feature) => {
@@ -141,6 +199,7 @@
       lineFeatureList.forEach((lineFeature) => {
         lineFeature.getGeometry()?.forEachSegment((start, end) => {
           if (isPointOnLine(coordinates, start, end)) {
+            const transit_mode = lineFeature.getProperties().transit_mode;
             let dx = end[0] - start[0];
             let dy = end[1] - start[1];
             rotation = Math.atan(dx / dy);
@@ -149,7 +208,7 @@
               image: new Icon({
                 src: 'public/resource/svg/path-arrow.svg',
                 imgSize: [200, 200],
-                scale: [0.1, 0.1],
+                scale: arrow_scale[transit_mode] || [0.1, 0.1],
                 rotation: rotation,
               }),
             });
@@ -165,8 +224,29 @@
   function pathPlaningTest() {
     pathPlaningPromise.then((pathPlaning) => {
       pathPlaning.search(startPoint.value, endPoint.value, (_status, result) => {
-        // console.log('result', result);
+        console.log('result', result);
+        const popupFeaturesArray = [] as Feature[];
         lineFeatureList = result.plans[0].segments.map((segment) => {
+          // 构建交通类型图标
+          let segmentStartFeature;
+          if (segment.transit.origin) {
+            segmentStartFeature = new Feature({
+              geometry: new Point([segment.transit.origin.lng, segment.transit.origin.lat]),
+            });
+          }
+          if (segment.transit.on_station) {
+            segmentStartFeature = new Feature({
+              geometry: new Point([
+                segment.transit.on_station.location.lng,
+                segment.transit.on_station.location.lat,
+              ]),
+            });
+          }
+          segmentStartFeature.set('popupType', 'transit');
+          segmentStartFeature.set('transit_mode', segment.transit_mode);
+          popupFeaturesArray.push(segmentStartFeature);
+
+          // 构建线路feature信息
           const segmentLine = segment.transit.path.map((element) => {
             return [element.lng, element.lat];
           });
@@ -184,15 +264,33 @@
         // 计算箭头数量
         calculateArrowPoints(lineFeatureList);
 
+        const startFeature = new Feature({
+          geometry: new Point(startPoint.value),
+        });
+        const endFeature = new Feature({
+          geometry: new Point(endPoint.value),
+        });
+        startFeature.set('popupType', 'start');
+        endFeature.set('popupType', 'end');
+        popupFeaturesArray.push(startFeature, endFeature);
+
         pathPlaningSource.clear();
         pathPlaningSource.addFeatures(lineFeatureList);
+        pathPlaningPopupSource.clear();
+        pathPlaningPopupSource.addFeatures(popupFeaturesArray);
 
         if (!isPathPlaningSourceAdd) {
           map.addLayer(pathPlaningDownLayer);
           map.addLayer(pathPlaningUpperLayer);
           map.addLayer(pathPlaningArrowLayer);
+          map.addLayer(pathPlaningPopupLayer);
           isPathPlaningSourceAdd = true;
         }
+
+        map.getView().fit(pathPlaningArrowSource.getExtent(), {
+          padding: [100, 100, 100, 100],
+          duration: 1000,
+        });
       });
     });
     // 更新比例尺时更新箭头数量和指向
