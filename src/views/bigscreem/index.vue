@@ -22,8 +22,12 @@
     <div class="middle">
       <div class="middle-item">
         <!-- TODO 样式调整 -->
-        <Input v-model:value="placeInfo.name" @onBlur="inputBlurHandler" />
-        <Button @click="placeSearch">搜索</Button>
+        <InputSearch
+          v-model:value="placeInfo.name"
+          @search="placeSearch"
+          @focus="inputBlurHandler"
+        />
+        <Button @click="activeButtonHandle(3)">规划</Button>
         <Button @click="propertiesActiveButtonHandle(0)">方式</Button>
         <Button @click="propertiesActiveButtonHandle(1)">租金</Button>
         <Button @click="searchFilterHandle(0)">清空筛选</Button>
@@ -43,8 +47,8 @@
             </CheckboxGroup>
           </FormItem>
           <FormItem>
-            <Button @click="searchfilterHandle(-2)">重置</Button>
-            <Button @click="searchfilterHandle(2)">确认</Button>
+            <Button @click="searchFilterHandle(-2)">重置</Button>
+            <Button @click="searchFilterHandle(2)">确认</Button>
           </FormItem>
         </Form>
       </div>
@@ -67,7 +71,40 @@
           :pagination="pagination"
         >
           <template #renderItem="{ item }">
-            <ListItem @click="handleAutoCompleteListItemClick(item)">
+            <ListItem @click="[handleAutoCompleteListItemClick(item), inputBlurHandler()]">
+              <ListItemMeta>
+                <template #description>
+                  <div>{{ item.name }}</div>
+                </template>
+              </ListItemMeta>
+            </ListItem>
+          </template>
+        </List>
+      </div>
+      <div
+        class="middle-item"
+        v-if="pathPlaningShow"
+        style="display: flex; flex-direction: column; background-color: #fff"
+      >
+        <Form :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
+          <FormItem label="起点">
+            <Input v-model:value="pathPlaningForm.startPlace" @click="activeInputHandler(1)" />
+          </FormItem>
+          <FormItem label="终点">
+            <Input id="2" v-model:value="pathPlaningForm.endPlace" @click="activeInputHandler(2)" />
+          </FormItem>
+          <FormItem>
+            <Button @click="pathPlaning">搜索</Button>
+          </FormItem>
+        </Form>
+        <List
+          class="middle-item-searchlist"
+          :data-source="placeInfoList"
+          item-layout="horizontal"
+          :pagination="pagination"
+        >
+          <template #renderItem="{ item }">
+            <ListItem @click="pathPlaningListItemClickHandler(item)">
               <ListItemMeta>
                 <template #description>
                   <div>{{ item.name }}</div>
@@ -133,19 +170,20 @@
     Select as AntSelect,
     SelectOption,
     Slider,
+    InputSearch,
   } from 'ant-design-vue';
   import { debounce } from 'lodash-es';
   import { Map } from 'ol';
   import Feature from 'ol/Feature.js';
   import { unByKey } from 'ol/Observable';
   import GeoJSON from 'ol/format/GeoJSON';
-  import { MultiPolygon, Point, Polygon, LineString, Geometry } from 'ol/geom';
+  import { MultiPolygon, Point, Polygon, LineString } from 'ol/geom';
   import { Draw, Interaction, Snap } from 'ol/interaction';
   import VectorLayer from 'ol/layer/Vector';
   import 'ol/ol.css';
   import VectorSource from 'ol/source/Vector';
   import { Circle, Fill, Icon, Stroke, Style, Text } from 'ol/style';
-  import { onMounted, reactive, ref, watch } from 'vue';
+  import { onMounted, reactive, ref, watch, watchEffect } from 'vue';
   import {
     CircleData,
     getHouseInPlots,
@@ -204,6 +242,9 @@
       case 2:
         arrivalRangeHandle(index);
         break;
+      case 3:
+        pathPlaningHandle(index);
+        break;
     }
   }
 
@@ -240,7 +281,7 @@
   // }
   let propertyFromShow = ref(-1);
   // 过滤器选项
-  let option = {} as OptionData;
+  let option: OptionData = {};
   const lease_typeCheck = ref([]);
   const priceSliderValue = ref<[number, number]>([2000, 5000]);
 
@@ -440,8 +481,10 @@
         const geometry = features[0].getGeometry();
         // ?. js语法访问对象属性或调用方法时，如果目标对象或属性不存在（即为 null 或 undefined）
         // 不会抛出错误，而是直接返回 undefined
-        console.log('geometry:', geometry);
-        const coordinates = geometry?.getCoordinates();
+        // console.log('geometry:', geometry);
+        // const coordinates = geometry?.getCoordinates();
+        // 使用类型断言告诉编译器返回的geometry为Geometry的子类Point类型
+        const coordinates = (geometry as Point).getCoordinates();
         if (coordinates) {
           center = coordinates;
           console.log('coordinates:', coordinates);
@@ -606,7 +649,7 @@
     polygonSearchListener = polygonDraw.on('drawend', async (event) => {
       const polygons = event.feature.getGeometry();
       let coordinates = polygons.getCoordinates();
-      const polygon = [] as PointData[];
+      const polygon: PointData[] = [];
       coordinates[0].forEach((item) => {
         let point: PointData = {
           longitude: item[0],
@@ -676,12 +719,13 @@
 
         // 还原上一点样式
         if (currentOverlayPoint) {
-          const style = overLayStyle(currentOverlayPoint);
+          const style = changeOverLayStyle(currentOverlayPoint);
           currentOverlayPoint.setStyle(style);
         }
         // 更改当前点样式为点击状态
-        const style = overLayStyle(features[0], 'click');
-        features[0].setStyle(style);
+        const style = changeOverLayStyle(features[0], 'click');
+        // 使用类型断言告诉编译器features[0]的类型为FeatureLike中的Feature类型
+        (features[0] as Feature).setStyle(style);
         currentOverlayPoint = features[0];
       }
     });
@@ -774,7 +818,7 @@
   // 矢量图层绘制
   function VectorLayerDraw(polygon) {
     drawVectorSource.clear();
-    let featureArray = [] as Feature[];
+    let featureArray: Feature[] = [];
     polygon.forEach((element) => {
       let feature = new Feature({
         geometry: new Polygon(element),
@@ -936,7 +980,7 @@
         };
         // 渲染鼠标悬停区域region图层
         if (!pointerMoveListenerAdded) {
-          pointMoveListener = map.on('pointermove', pointMoveHandle);
+          pointMoveListener = map.on('pointermove', debounce(pointMoveHandle, 100));
           doubleClickListener = map.on('dblclick', doubleClickHandle);
           pointerMoveListenerAdded = true;
         }
@@ -982,7 +1026,7 @@
 
   // popup图标绘制
   let overLaySourceAdd = false;
-  let overlayFeatureArray = [] as Feature<Point>[];
+  let overlayFeatureArray: Feature<Point>[] = [];
   const overLaySource = new VectorSource();
   const overLayLayer = new VectorLayer({
     source: overLaySource,
@@ -992,12 +1036,37 @@
 
   // 使用canvas创建 text 文本中的内容，但不渲染至屏幕，仅用于计算text像素长度
   const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
+  // 使用非空断言操作符!
+  const context = canvas.getContext('2d')!;
   context.font = '14px Arial';
 
   // overLayLayer图层style函数
-  function overLayStyle(feature, type = 'default') {
-    // console.log(feature.getProperties());
+  function overLayStyle(feature) {
+    const property = feature.getProperties();
+    const count = property.count;
+    const plot = property.plot;
+    const text = plot + '|' + count + '套';
+    // 计算text像素长度
+    const textWidth = context.measureText(text).width;
+
+    return new Style({
+      text: new Text({
+        font: '14px Arial',
+        text: text,
+        fill: new Fill({ color: '#fff' }),
+        offsetX: 8,
+      }),
+      image: new Icon({
+        src: '/resource/svg/overlay-bg.svg',
+        anchor: [0.5, 20],
+        anchorXUnits: 'fraction',
+        anchorYUnits: 'pixels',
+        scale: [textWidth / 100, 0.9],
+      }),
+    });
+  }
+  // 为符合ts编译检查将overLayLayer图层style函数
+  function changeOverLayStyle(feature, type = 'default') {
     const property = feature.getProperties();
     const count = property.count;
     const plot = property.plot;
@@ -1094,10 +1163,9 @@
     });
   }
 
-  const searchListShow = ref(false);
-
+  const searchListShow = ref<boolean>(false);
   function inputBlurHandler() {
-    searchListShow.value == false ? true : false;
+    searchListShow.value = searchListShow.value === false ? true : false;
   }
 
   const { autoCompletePromise } = initGaoDe();
@@ -1176,9 +1244,45 @@
     });
   }
 
-  let arrowPoints: Feature<Geometry>[];
-  let startPoint = ref([121.468768, 31.215104]);
-  let endPoint = ref([121.486128, 31.211733]);
+  // 路径规划部分
+  const pathPlaningShow = ref<boolean>(false);
+  const pathPlaningForm = reactive({
+    startPlace: '',
+    endPlace: '',
+  });
+  // watch(
+  //   () => pathPlaningForm.startPoint,
+  //   (newValue, _oldValue) => {
+  //     if (newValue) {
+  //       autoCompleteSearch(pathPlaningForm.startPoint);
+  //     }
+  //   },
+  // );
+
+  watchEffect(() => {
+    if (pathPlaningForm.startPlace) {
+      autoCompleteSearch(pathPlaningForm.startPlace);
+    }
+    if (pathPlaningForm.endPlace) {
+      autoCompleteSearch(pathPlaningForm.endPlace);
+    }
+  });
+  const activeInput = ref(0);
+  function activeInputHandler(index) {
+    activeInput.value = index;
+  }
+  function pathPlaningListItemClickHandler(item) {
+    if (activeInput.value === 0) return;
+    if (activeInput.value === 1) {
+      pathPlaningForm.startPlace = '';
+      pathPlaningForm.startPlace = item.name;
+    }
+    if (activeInput.value === 2) {
+      pathPlaningForm.endPlace = '';
+      pathPlaningForm.endPlace = item.name;
+    }
+  }
+  let arrowPoints: Feature<Point>[];
   const subwayLineColors = {
     地铁1号线: 'rgb(234,11,42)',
     地铁2号线: 'rgb(148,212,11)',
@@ -1287,7 +1391,7 @@
   }
   let isPathPlaningSourceAdd = false;
   const pathPlaningSource = new VectorSource();
-  const pathPlaningArrowSource = new VectorSource();
+  const pathPlaningArrowSource = new VectorSource<Point>();
   const pathPlaningPopupSource = new VectorSource();
   const pathPlaningUpperLayer = new VectorLayer({
     source: pathPlaningSource,
@@ -1305,7 +1409,7 @@
   const pathPlaningArrowLayer = new VectorLayer({
     source: pathPlaningArrowSource,
     style: (feature) => {
-      let coordinates = feature.getGeometry().getCoordinates();
+      let coordinates = (feature.getGeometry() as Point)?.getCoordinates();
       let returnStyle;
       let rotation;
       lineFeatureList.forEach((lineFeature) => {
@@ -1361,8 +1465,8 @@
   const pathPlaningPopupLayer = new VectorLayer({
     source: pathPlaningPopupSource,
     style: (feature) => {
-      const popupType = feature.getProperties().popupType;
-      if (!popupType) return null;
+      const popupType = feature.getProperties()?.popupType;
+      // if (!popupType) return null;
       if (popupType === 'start') {
         return startIcon;
       }
@@ -1370,8 +1474,8 @@
         return endIcon;
       }
       if (popupType === 'transit') {
-        const transit_mode = feature.getProperties().transit_mode;
-        if (!transit_mode) return null;
+        const transit_mode = feature.getProperties()?.transit_mode;
+        // if (!transit_mode) return null;
         if (transit_mode === 'BUS') {
           return busIcon;
         }
@@ -1379,84 +1483,95 @@
           return subwayIcon;
         }
       }
-      return null;
+      // 为什么ts无法推断出手动返回null的情况
+      // return null;
     },
   });
 
   // INFO 路径规划
   let lineFeatureList;
   const { pathPlaningPromise } = initGaoDe();
-  function pathPlaningTest() {
+  /**
+   * 输入起终地点名进行路径规划
+   */
+  function pathPlaning() {
+    listenerClear();
     pathPlaningPromise.then((pathPlaning) => {
-      pathPlaning.search(startPoint.value, endPoint.value, (_status, result) => {
-        const popupFeaturesArray = [] as Feature[];
-        const startFeature = new Feature({
-          geometry: new Point(startPoint.value),
-        });
-        const endFeature = new Feature({
-          geometry: new Point(endPoint.value),
-        });
-        startFeature.set('popupType', 'start');
-        endFeature.set('popupType', 'end');
-        popupFeaturesArray.push(startFeature, endFeature);
-
-        lineFeatureList = result.plans[0].segments.map((segment) => {
-          // 构建交通类型图标
-          let segmentStartFeature;
-          if (segment.transit.origin) {
-            segmentStartFeature = new Feature({
-              geometry: new Point([segment.transit.origin.lng, segment.transit.origin.lat]),
-            });
-          }
-          if (segment.transit.on_station) {
-            segmentStartFeature = new Feature({
-              geometry: new Point([
-                segment.transit.on_station.location.lng,
-                segment.transit.on_station.location.lat,
-              ]),
-            });
-          }
-          segmentStartFeature.set('popupType', 'transit');
-          segmentStartFeature.set('transit_mode', segment.transit_mode);
-          popupFeaturesArray.push(segmentStartFeature);
-
-          // 构建线路feature信息
-          const segmentLine = segment.transit.path.map((element) => {
-            return [element.lng, element.lat];
+      pathPlaning.search(
+        [{ keyword: pathPlaningForm.startPlace }, { keyword: pathPlaningForm.endPlace }],
+        (_status, result) => {
+          console.log('result', result);
+          const popupFeaturesArray: Feature[] = [];
+          const startFeature = new Feature({
+            geometry: new Point([result.start.location.lng, result.start.location.lat]),
           });
-          const segmentLineFeature = new Feature({
-            geometry: new LineString(segmentLine),
+          const endFeature = new Feature({
+            geometry: new Point([result.end.location.lng, result.end.location.lat]),
           });
-          const instruction = segment.instruction;
-          // 匹配描述信息中地铁线路信息
-          let match = instruction.match(/地铁\d+号线/);
-          if (match) segmentLineFeature.set('line', match[0]);
-          segmentLineFeature.set('transit_mode', segment.transit_mode);
+          startFeature.set('popupType', 'start');
+          endFeature.set('popupType', 'end');
+          popupFeaturesArray.push(startFeature, endFeature);
 
-          return segmentLineFeature;
-        });
+          lineFeatureList = result.plans[0].segments.map((segment) => {
+            // 构建交通类型图标
+            let segmentStartFeature;
+            if (segment.transit.origin) {
+              segmentStartFeature = new Feature({
+                geometry: new Point([segment.transit.origin.lng, segment.transit.origin.lat]),
+              });
+            }
+            if (segment.transit.on_station) {
+              segmentStartFeature = new Feature({
+                geometry: new Point([
+                  segment.transit.on_station.location.lng,
+                  segment.transit.on_station.location.lat,
+                ]),
+              });
+            }
+            segmentStartFeature.set('popupType', 'transit');
+            segmentStartFeature.set('transit_mode', segment.transit_mode);
+            popupFeaturesArray.push(segmentStartFeature);
 
-        // 计算箭头数量
-        calculateArrowPoints(lineFeatureList);
+            // 构建线路feature信息
+            const segmentLine = segment.transit.path.map((element) => {
+              return [element.lng, element.lat];
+            });
+            const segmentLineFeature = new Feature({
+              geometry: new LineString(segmentLine),
+            });
+            const instruction = segment.instruction;
+            // 匹配描述信息中地铁线路信息
+            let match = instruction.match(/地铁\d+号线/);
+            if (match) segmentLineFeature.set('line', match[0]);
+            segmentLineFeature.set('transit_mode', segment.transit_mode);
 
-        pathPlaningSource.clear();
-        pathPlaningSource.addFeatures(lineFeatureList);
-        pathPlaningPopupSource.clear();
-        pathPlaningPopupSource.addFeatures(popupFeaturesArray);
+            return segmentLineFeature;
+          });
 
-        if (!isPathPlaningSourceAdd) {
-          map.addLayer(pathPlaningDownLayer);
-          map.addLayer(pathPlaningUpperLayer);
-          map.addLayer(pathPlaningArrowLayer);
-          map.addLayer(pathPlaningPopupLayer);
-          isPathPlaningSourceAdd = true;
-        }
-        map.getView().fit(pathPlaningArrowSource.getExtent(), {
-          padding: [100, 100, 100, 100],
-          duration: 1000,
-        });
-      });
+          // 计算箭头数量
+          calculateArrowPoints(lineFeatureList);
+
+          pathPlaningSource.clear();
+          pathPlaningSource.addFeatures(lineFeatureList);
+          pathPlaningPopupSource.clear();
+          pathPlaningPopupSource.addFeatures(popupFeaturesArray);
+
+          if (!isPathPlaningSourceAdd) {
+            map.addLayer(pathPlaningDownLayer);
+            map.addLayer(pathPlaningUpperLayer);
+            map.addLayer(pathPlaningArrowLayer);
+            map.addLayer(pathPlaningPopupLayer);
+            isPathPlaningSourceAdd = true;
+          }
+
+          map.getView().fit(pathPlaningArrowSource.getExtent(), {
+            padding: [100, 100, 100, 100],
+            duration: 1000,
+          });
+        },
+      );
     });
+
     // 更新比例尺时更新箭头数量和指向
     listenerClear(pathPlaningListener);
     pathPlaningListener = map.getView().on('change:resolution', () => {
@@ -1465,7 +1580,7 @@
     });
   }
   function calculateArrowPoints(lineFeatureList) {
-    arrowPoints = [] as Feature[];
+    arrowPoints = [];
     lineFeatureList.forEach((lineFeature) => {
       let arrowNumber = Math.ceil(
         lineFeature.getGeometry().getLength() / map.getView().getResolution() / 100,
@@ -1482,6 +1597,21 @@
     pathPlaningArrowSource.clear();
     pathPlaningArrowSource.addFeatures(arrowPoints);
   }
+  function pathPlaningHandle(index) {
+    if (activeButton.value == index) {
+      pathPlaningClear();
+      pathPlaningShow.value = pathPlaningShow.value === false ? true : false;
+      activeButton.value = -1;
+    } else {
+      pathPlaningShow.value = pathPlaningShow.value === false ? true : false;
+      activeButton.value = 3;
+    }
+  }
+  function pathPlaningClear() {
+    pathPlaningSource.clear();
+    pathPlaningArrowSource.clear();
+    pathPlaningPopupSource.clear();
+  }
 
   // 监听按钮在激活状态下的切换
   watch(activeButton, (newValue, oldValue) => {
@@ -1494,6 +1624,9 @@
     }
     if (oldValue === 2 && newValue !== 2 && newValue !== -1) {
       drawVectorSource.clear();
+    }
+    if (oldValue === 3 && newValue !== 3 && newValue !== -1) {
+      pathPlaningClear();
     }
     // 按钮为停止状态启动地图层级查询
     if (newValue === -1) {
@@ -1509,7 +1642,6 @@
     map = mapStore.GetMap;
     mapLevelSearch();
     addLengthScaleTest(map);
-    pathPlaningTest();
   });
 </script>
 
@@ -1627,3 +1759,4 @@
     }
   }
 </style>
+./test.ts

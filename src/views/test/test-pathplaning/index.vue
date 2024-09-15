@@ -218,7 +218,6 @@
       return returnStyle;
     },
   });
-  // INFO 路径规划
   let lineFeatureList;
   const { pathPlaningPromise } = initGaoDe();
   function pathPlaningTest() {
