@@ -4,13 +4,13 @@
 
 <script setup lang="ts">
   import { onMounted, ref } from 'vue';
-  import { useMapStore } from '../../../store/modules/map';
   import { Feature } from 'ol';
   import { Geometry, LineString, Point } from 'ol/geom';
   import VectorLayer from 'ol/layer/Vector';
   import VectorSource from 'ol/source/Vector';
   import { Style, Stroke, Icon } from 'ol/style';
   import initGaoDe from '../../../utils/gaode';
+  import addMap from '/@/store/modules/map';
 
   let arrowPoints: Feature<Geometry>[];
   let startPoint = ref([121.278768, 31.215104]);
@@ -318,10 +318,8 @@
   }
 
   let map;
-  const mapStore = useMapStore();
   onMounted(() => {
-    mapStore.initOpenlayers('container');
-    map = mapStore.GetMap;
+    map = addMap('container', 'testPathPlaning');
     pathPlaningTest();
   });
 </script>
@@ -332,3 +330,4 @@
     width: 100%;
   }
 </style>
+../../../store/modules/map

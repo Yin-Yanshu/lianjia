@@ -31,10 +31,9 @@
   import HousePricePie from './components/HousePricePie.vue';
   import HouseTypePie from './components/HouseTypePie.vue';
   import { getTimeHouseHeatMap, HeatMapTimeData } from '/@/api/point';
-  import { useMapStore } from '/@/store/modules/map';
+  import addMap from '/@/store/modules/map';
 
   const loading = ref(true);
-  const mapStore = useMapStore();
 
   const heatMapSource = new VectorSource<Point>();
   const heatMapLayer = new Heatmap({
@@ -95,11 +94,10 @@
   const onCalendarChange = (val: RangeValue) => {
     dates.value = val;
   };
-  // mapstore获取全局唯一map
+  // 获取全局唯一map
   let map;
   onMounted(() => {
-    mapStore.initOpenlayers('map-container');
-    map = mapStore.GetMap;
+    map = addMap('map-container', 'analysis');
     // AddHeatMap(map, getCurrentHouseHeatMap);
     const params: HeatMapTimeData = {
       start_time: '2024-01-10',

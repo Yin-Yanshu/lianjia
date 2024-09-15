@@ -196,12 +196,12 @@
     PolygonData,
     PolygonListData,
   } from '../../api/point';
-  import { useMapStore } from '../../store/modules/map';
   import initGaoDe from '../../utils/gaode';
   import { getDistance } from 'ol/sphere';
+  import addMap from '/@/store/modules/map';
 
-  // mapstore获取全局唯一map
-  let map;
+  // 获取全局唯一map
+  let map: Map;
   const subwaylines = {
     lineOne: {
       label: '一号线',
@@ -224,7 +224,6 @@
       url: 'http://localhost:8080/geoserver/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Ashanghai_subawy_line5&maxFeatures=50&outputFormat=application%2Fjson',
     },
   };
-  const mapStore = useMapStore();
 
   /**
    * 按钮选择处理器
@@ -386,23 +385,23 @@
   function SubwaySelect() {
     switch (activeLine.value) {
       case '一号线':
-        addWFS(map as Map, subwaylines.lineOne.url);
+        addWFS(map, subwaylines.lineOne.url);
         break;
       case '二号线':
-        addWFS(map as Map, subwaylines.lineTwo.url);
+        addWFS(map, subwaylines.lineTwo.url);
         break;
       case '三号线':
-        addWFS(map as Map, subwaylines.lineThree.url);
+        addWFS(map, subwaylines.lineThree.url);
         break;
       case '四号线':
-        addWFS(map as Map, subwaylines.lineFour.url);
+        addWFS(map, subwaylines.lineFour.url);
         break;
       case '五号线':
-        addWFS(map as Map, subwaylines.lineFive.url);
+        addWFS(map, subwaylines.lineFive.url);
         break;
     }
     if (!isFirstCall) {
-      getFeature(map as Map);
+      getFeature(map);
       isFirstCall = true;
     }
   }
@@ -516,7 +515,7 @@
       addOverlay(map, response.data.plots);
       houseList.value = [...response.data.houseList];
       listShow.value = true;
-      getHouseByClickPlot(map as Map);
+      getHouseByClickPlot(map);
     });
   }
 
@@ -664,11 +663,11 @@
       param = searchFilter(param);
       const response = await getPlotsInPolygon(param);
       houseCount.value = response.data.plots.reduce((sum, plot) => sum + plot.count, 0);
-      addOverlay(map as Map, response.data.plots);
+      addOverlay(map, response.data.plots);
       houseList.value = [...response.data.houseList];
       listShow.value = true;
       // 获取小区信息详细房屋信息
-      clickPlotListener = getHouseByClickPlot(map as Map);
+      clickPlotListener = getHouseByClickPlot(map);
     });
   }
 
@@ -802,10 +801,10 @@
             polygonListParam = searchFilter(polygonListParam);
             const response = await getPlotsInPolygonList(polygonListParam);
             houseCount.value = response.data.plots.reduce((sum, plot) => sum + plot.count, 0);
-            addOverlay(map as Map, response.data.plots);
+            addOverlay(map, response.data.plots);
             houseList.value = [...response.data.houseList];
             listShow.value = true;
-            clickPlotListener = getHouseByClickPlot(map as Map);
+            clickPlotListener = getHouseByClickPlot(map);
           },
           {
             policy: arriveOption.value,
@@ -916,8 +915,8 @@
           param = searchFilter(param);
           const response = await getPlotsInCircle(param);
           houseCount.value = response.data.plots.reduce((sum, plot) => sum + plot.count, 0);
-          addOverlay(map as Map, response.data.plots);
-          clickPlotListener = getHouseByClickPlot(map as Map);
+          addOverlay(map, response.data.plots);
+          clickPlotListener = getHouseByClickPlot(map);
           // houseList.value = [...response.data.houseList];
           // listShow.value = true;
         }, 1000)(); // 1000ms 防抖延迟
@@ -1087,7 +1086,7 @@
           anchor: [0.5, 20],
           anchorXUnits: 'fraction',
           anchorYUnits: 'pixels',
-          scale: [textWidth / 100, 0.8],
+          scale: [textWidth / 100, 0.9],
         }),
       });
     }
@@ -1217,8 +1216,8 @@
       param = searchFilter(param);
       const response = await getPlotsInCircle(param);
       houseCount.value = response.data.plots.reduce((sum, plot) => sum + plot.count, 0);
-      addOverlay(map as Map, response.data.plots);
-      clickPlotListener = getHouseByClickPlot(map as Map);
+      addOverlay(map, response.data.plots);
+      clickPlotListener = getHouseByClickPlot(map);
       houseList.value = [...response.data.houseList];
       listShow.value = true;
     }, 1000)();
@@ -1282,7 +1281,6 @@
       pathPlaningForm.endPlace = item.name;
     }
   }
-  let arrowPoints: Feature<Point>[];
   const subwayLineColors = {
     地铁1号线: 'rgb(234,11,42)',
     地铁2号线: 'rgb(148,212,11)',
@@ -1343,7 +1341,7 @@
     plainingStyleCache[line] = style;
     return style;
   }
-  function planingUpperStyle(feature) {
+  function planingUpperStyle(feature: Feature) {
     const transit_mode = feature.get('transit_mode');
     switch (transit_mode) {
       case 'WALK':
@@ -1464,6 +1462,9 @@
   });
   const pathPlaningPopupLayer = new VectorLayer({
     source: pathPlaningPopupSource,
+    // BUG style可选返回值ts类型匹配失败
+    // style可选返回值 StyleLike | null | undefined
+    // StyleLike为Style|Array<Style>|StyleFunction联合类型，似乎手动返回null无法让ts正确匹配
     style: (feature) => {
       const popupType = feature.getProperties()?.popupType;
       // if (!popupType) return null;
@@ -1489,7 +1490,7 @@
   });
 
   // INFO 路径规划
-  let lineFeatureList;
+  let lineFeatureList: Feature<LineString>[];
   const { pathPlaningPromise } = initGaoDe();
   /**
    * 输入起终地点名进行路径规划
@@ -1579,11 +1580,12 @@
       calculateArrowPoints(lineFeatureList);
     });
   }
+  let arrowPoints: Feature<Point>[];
   function calculateArrowPoints(lineFeatureList) {
     arrowPoints = [];
     lineFeatureList.forEach((lineFeature) => {
       let arrowNumber = Math.ceil(
-        lineFeature.getGeometry().getLength() / map.getView().getResolution() / 100,
+        lineFeature.getGeometry().getLength() / map.getView().getResolution()! / 100,
       );
       for (var i = 0; i <= arrowNumber; i++) {
         let fracPosition = i / arrowNumber;
@@ -1638,8 +1640,7 @@
   });
 
   onMounted(() => {
-    mapStore.initOpenlayers('container');
-    map = mapStore.GetMap;
+    map = addMap('container', 'bigscreem');
     mapLevelSearch();
     addLengthScaleTest(map);
   });
@@ -1759,4 +1760,3 @@
     }
   }
 </style>
-./test.ts
