@@ -3,8 +3,8 @@
     <div class="right">
       <div class="right-item">
         <Button class="search-button" @click="activeButtonHandle(0)">地铁线路查询</Button>
-        <AntSelect v-if="activeButton === 0" v-model:value="activeLine" @change="SubwaySelect">
-          <SelectOption v-for="options in subwaylines" :key="options.label" :value="options.label"
+        <AntSelect v-if="activeButton === 0" v-model:value="activeLine" @change="subwaySelect">
+          <SelectOption v-for="options in subwaylines" :key="options.label" :value="options.value"
             >{{ options.label }}
           </SelectOption>
         </AntSelect>
@@ -158,46 +158,46 @@
 <script setup lang="ts">
   import { CaretDownOutlined } from '@ant-design/icons-vue';
   import {
+    Select as AntSelect,
     Button,
     Checkbox,
     CheckboxGroup,
     Form,
     FormItem,
     Input,
+    InputSearch,
     List,
     ListItem,
     ListItemMeta,
-    Select as AntSelect,
     SelectOption,
     Slider,
-    InputSearch,
   } from 'ant-design-vue';
   import { debounce } from 'lodash-es';
   import { Map } from 'ol';
   import Feature from 'ol/Feature.js';
   import { unByKey } from 'ol/Observable';
   import GeoJSON from 'ol/format/GeoJSON';
-  import { MultiPolygon, Point, Polygon, LineString } from 'ol/geom';
+  import { LineString, MultiPolygon, Point, Polygon } from 'ol/geom';
   import { Draw, Interaction, Snap } from 'ol/interaction';
   import VectorLayer from 'ol/layer/Vector';
   import 'ol/ol.css';
   import VectorSource from 'ol/source/Vector';
+  import { getDistance } from 'ol/sphere';
   import { Circle, Fill, Icon, Stroke, Style, Text } from 'ol/style';
   import { onMounted, reactive, ref, watch, watchEffect } from 'vue';
   import {
     CircleData,
-    getHouseInPlots,
-    getPlotsInCircle,
-    getPlotsInPolygon,
-    getPlotsInPolygonList,
     OptionData,
     PlotData,
     PointData,
     PolygonData,
     PolygonListData,
+    getHouseInPlots,
+    getPlotsInCircle,
+    getPlotsInPolygon,
+    getPlotsInPolygonList,
   } from '../../api/point';
   import initGaoDe from '../../utils/gaode';
-  import { getDistance } from 'ol/sphere';
   import addMap from '/@/store/modules/map';
 
   // 获取全局唯一map
@@ -205,22 +205,27 @@
   const subwaylines = {
     lineOne: {
       label: '一号线',
+      value: 'lineOne',
       url: 'http://localhost:8080/geoserver/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Ashanghai_subawy_line1&maxFeatures=50&outputFormat=application%2Fjson',
     },
     lineTwo: {
       label: '二号线',
+      value: 'lineTwo',
       url: 'http://localhost:8080/geoserver/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Ashanghai_subawy_line2&maxFeatures=50&outputFormat=application%2Fjson',
     },
     lineThree: {
       label: '三号线',
+      value: 'lineThree',
       url: 'http://localhost:8080/geoserver/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Ashanghai_subawy_line3&maxFeatures=50&outputFormat=application%2Fjson',
     },
     lineFour: {
       label: '四号线',
+      value: 'lineFour',
       url: 'http://localhost:8080/geoserver/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Ashanghai_subawy_line4&maxFeatures=50&outputFormat=application%2Fjson',
     },
     lineFive: {
       label: '五号线',
+      value: 'lineFive',
       url: 'http://localhost:8080/geoserver/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Ashanghai_subawy_line5&maxFeatures=50&outputFormat=application%2Fjson',
     },
   };
@@ -368,48 +373,10 @@
     // }
   }
 
-  let isFirstCall = false;
-  const activeLine = ref('请选择地铁线路');
-
-  // 激活地铁选择下拉栏
-  function subwaySearchHandle(index) {
-    if (activeButton.value == index) {
-      subwaySearchClear();
-      activeButton.value = -1;
-    } else {
-      activeButton.value = 0;
-    }
-  }
-
-  // INFO 选择地铁线路
-  function SubwaySelect() {
-    switch (activeLine.value) {
-      case '一号线':
-        addWFS(map, subwaylines.lineOne.url);
-        break;
-      case '二号线':
-        addWFS(map, subwaylines.lineTwo.url);
-        break;
-      case '三号线':
-        addWFS(map, subwaylines.lineThree.url);
-        break;
-      case '四号线':
-        addWFS(map, subwaylines.lineFour.url);
-        break;
-      case '五号线':
-        addWFS(map, subwaylines.lineFive.url);
-        break;
-    }
-    if (!isFirstCall) {
-      getFeature(map);
-      isFirstCall = true;
-    }
-  }
-
   // 获取图层要素信息
   let subwayLayerAdd = false;
-  let circleDraw: Interaction;
-  let snap: Interaction;
+  let circleDraw: Interaction | null;
+  let snap: Interaction | null;
 
   // 监听器
   let subwaySearchListener;
@@ -446,6 +413,56 @@
     }
   }
 
+  let isFirstCall = false;
+  const activeLine = ref('请选择地铁线路');
+  // 加载WFS服务图层
+  const subwayVectorSource = new VectorSource<Point>({
+    format: new GeoJSON(),
+  });
+  const subwayVectorLayer = new VectorLayer({
+    source: subwayVectorSource,
+    style: (feature) => {
+      const line = feature.getProperties().line;
+      return new Style({
+        image: new Circle({
+          radius: 10,
+          fill: new Fill({
+            color: 'rgb(255,255,255)',
+          }),
+          stroke: new Stroke({
+            color: subwayLineColors[line],
+            width: 5,
+          }),
+        }),
+      });
+    },
+  });
+
+  // 激活地铁选择下拉栏
+  function subwaySearchHandle(index) {
+    if (activeButton.value == index) {
+      subwaySearchClear();
+      activeButton.value = -1;
+    } else {
+      activeButton.value = 0;
+    }
+  }
+
+  // INFO 选择地铁线路
+  function subwaySelect() {
+    let url = subwaylines[activeLine.value].url;
+    subwayVectorSource.setUrl(url);
+    subwayVectorSource.refresh();
+    if (!subwayLayerAdd) {
+      map.addLayer(subwayVectorLayer);
+      subwayLayerAdd = true;
+    }
+    if (!isFirstCall) {
+      getFeature(map);
+      isFirstCall = true;
+    }
+  }
+
   const drawStyle = new Style({
     fill: new Fill({
       color: 'rgb(172,223,200,0.4)',
@@ -459,36 +476,30 @@
   function getFeature(map: Map) {
     listenerClear();
 
+    let count = false;
     circleDraw = new Draw({
       source: new VectorSource(),
       type: 'Circle',
       style: drawStyle,
       // condition接受boolean，函数返回true绘制当前点
       condition: (event) => {
-        let features = map.getFeaturesAtPixel(event.pixel);
-        if (features.length === 0) {
-          return false;
+        if (count) {
+          count = false;
+          const coordinate = map.getCoordinateFromPixel(event.pixel);
+          radius = Math.sqrt(
+            Math.pow(center[0] - coordinate[0], 2) + Math.pow(center[1] - coordinate[1], 2),
+          );
+          return true;
         }
-        const properties = features[0].getProperties();
-        const plot = properties.plot;
-
-        if (plot) {
-          console.log('property:', properties);
-          return false;
+        const pixelCoordinate = map.getCoordinateFromPixel(event.pixel);
+        const feature = subwayVectorSource.getClosestFeatureToCoordinate(pixelCoordinate);
+        center = feature.getGeometry()!.getCoordinates();
+        const distance = getDistance(center, pixelCoordinate);
+        if (distance < 10) {
+          count = true;
+          return true;
         }
-
-        const geometry = features[0].getGeometry();
-        // ?. js语法访问对象属性或调用方法时，如果目标对象或属性不存在（即为 null 或 undefined）
-        // 不会抛出错误，而是直接返回 undefined
-        // console.log('geometry:', geometry);
-        // const coordinates = geometry?.getCoordinates();
-        // 使用类型断言告诉编译器返回的geometry为Geometry的子类Point类型
-        const coordinates = (geometry as Point).getCoordinates();
-        if (coordinates) {
-          center = coordinates;
-          console.log('coordinates:', coordinates);
-        }
-        return true;
+        return false;
       },
     });
     snap = new Snap({
@@ -499,6 +510,7 @@
     map.addInteraction(snap);
 
     let center;
+    let radius;
     // 本项目规范，一定需要定义但未使用的变量采用_前缀
     subwaySearchListener = circleDraw.on('drawend', async (_event) => {
       let param: CircleData = {
@@ -508,7 +520,7 @@
       };
       param.longitude = center[0];
       param.latitude = center[1];
-      param.radius = 0.01;
+      param.radius = radius;
       param = searchFilter(param);
       const response = await getPlotsInCircle(param);
       houseCount.value = response.data.plots.reduce((sum, plot) => sum + plot.count, 0);
@@ -521,70 +533,17 @@
 
   // 地铁查询清除
   function subwaySearchClear() {
-    // if (snap) {
-    //   let result = map.removeInteraction(snap);
-    //   // snap = null;
-    //   console.log('removesnap');
-    //   console.log(result);
-    // }
-    // if (circleDraw) {
-    //   let result = map.removeInteraction(circleDraw);
-    //   // circleDraw = null;
-    //   console.log('removecircleDraw');
-    //   console.log(result);
-    // }
-
-    // 清理图层数据
-    map.getInteractions().forEach((interaction) => {
-      if (interaction instanceof Snap) {
-        map.removeInteraction(interaction);
-      }
-      if (interaction instanceof Draw) {
-        let result = map.removeInteraction(interaction);
-        console.log('Draw');
-        console.log(result);
-      }
-    });
+    if (snap) {
+      map.removeInteraction(snap);
+      snap = null;
+    }
+    if (circleDraw) {
+      map.removeInteraction(circleDraw);
+      circleDraw = null;
+    }
     activeLine.value = '请选择地铁线路';
     subwayVectorSource.clear();
-    map.removeInteraction(circleDraw);
     isFirstCall = false;
-  }
-
-  // 加载WFS服务图层
-  let subwayVectorSource = new VectorSource({
-    format: new GeoJSON(),
-  });
-  let subwayVectorLayer = new VectorLayer({
-    source: subwayVectorSource,
-    style: new Style({
-      image: new Circle({
-        radius: 8,
-        fill: new Fill({
-          color: 'rgb(255,255,255)',
-        }),
-        stroke: new Stroke({
-          color: '#f9d79d',
-          width: 4,
-        }),
-      }),
-    }),
-  });
-
-  function addWFS(map: Map, url: string) {
-    if (subwayVectorSource) {
-      subwayVectorSource.clear();
-    }
-    subwayVectorSource = new VectorSource({
-      format: new GeoJSON(),
-      url: url,
-    });
-    subwayVectorLayer.setSource(subwayVectorSource);
-
-    if (!subwayLayerAdd) {
-      map.addLayer(subwayVectorLayer);
-      subwayLayerAdd = true;
-    }
   }
 
   const pagination = {
@@ -624,19 +583,15 @@
           width: 2,
         }),
       }),
-      // condition接受boolean，函数返回true绘制当前点
+      // 判断是否点击到了绘制的overlay，如果点击到则结束本次绘制
       condition: (event) => {
         let features = map.getFeaturesAtPixel(event.pixel);
         if (features.length == 0) {
           return true;
-        } else {
-          console.log('features');
-          console.log(features[0].getProperties());
-
-          let plot = features[0].getProperties().plot;
-          if (plot) return false;
+        } else if (!features[0].getProperties().plot) {
           return true;
         }
+        return false;
       },
     });
     map.addInteraction(polygonDraw);
@@ -672,15 +627,7 @@
   }
 
   function polygonSearchClear() {
-    map.getInteractions().forEach((interaction) => {
-      if (interaction instanceof Draw) {
-        let draw = map.removeInteraction(interaction);
-        console.log('Draw', draw);
-      }
-    });
-
-    // let draw = map.removeInteraction(polygonDraw);
-    // console.log('Draw',draw);
+    map.removeInteraction(polygonDraw);
   }
 
   let currentOverlayPoint;
@@ -1026,7 +973,7 @@
   // popup图标绘制
   let overLaySourceAdd = false;
   let overlayFeatureArray: Feature<Point>[] = [];
-  const overLaySource = new VectorSource();
+  const overLaySource = new VectorSource<Point>();
   const overLayLayer = new VectorLayer({
     source: overLaySource,
     // 传入style处理函数
