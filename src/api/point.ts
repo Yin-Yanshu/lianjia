@@ -97,9 +97,27 @@ export const getCurrentHouseHeatMap = () => {
   });
 };
 
-export const getTimeHouseHeatMap = (data: HeatMapTimeData) => {
+export const getDynamicHouseHeatMap = (data: HeatMapTimeData) => {
   return defHttp.post({
     url: '/heatmap',
+    data: {
+      ...data,
+    },
+  });
+};
+
+export const getHouseList = (data: OptionData) => {
+  return defHttp.post({
+    url: '/house/random-list',
+    data: {
+      ...data,
+    },
+  });
+};
+
+export const getVRHouse = (data) => {
+  return defHttp.post({
+    url: '/house/houseid',
     data: {
       ...data,
     },

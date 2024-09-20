@@ -30,8 +30,9 @@
   import GrowCard from './components/GrowCard.vue';
   import HousePricePie from './components/HousePricePie.vue';
   import HouseTypePie from './components/HouseTypePie.vue';
-  import { getTimeHouseHeatMap, HeatMapTimeData } from '/@/api/point';
+  import { getDynamicHouseHeatMap, HeatMapTimeData } from '/@/api/point';
   import addMap from '/@/store/modules/map';
+  import mapContainerWatch from '/@/utils/mapContainerWatch';
 
   const loading = ref(true);
 
@@ -103,7 +104,8 @@
       start_time: '2024-01-10',
       end_time: '2024-02-10',
     };
-    AddHeatMap(map, getTimeHouseHeatMap, params);
+    AddHeatMap(map, getDynamicHouseHeatMap, params);
+    mapContainerWatch(map);
   });
 
   setTimeout(() => {
@@ -126,6 +128,7 @@
     #map-container {
       padding: 16px;
       padding-left: 0px;
+      padding-bottom: 0%;
       width: 67%;
       height: 100%;
     }
@@ -138,6 +141,7 @@
       height: 100%;
       padding: 16px;
       padding-left: 0px;
+      padding-bottom: 0%;
     }
   }
 

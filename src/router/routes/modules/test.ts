@@ -30,6 +30,14 @@ const test: AppRouteModule = {
         title: t('routes.dashboard.pathplaning'),
       },
     },
+    {
+      path: 'dynamicheatmap',
+      name: 'DynamicHeatmap',
+      component: () => import('/@/views/test/test-dynamicheatmap/index.vue'),
+      meta: {
+        title: '动态热力图',
+      },
+    },
   ],
 };
 

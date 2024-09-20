@@ -140,8 +140,8 @@
               </ListItemMeta>
 
               <template #extra>
-                <!-- <img width="60" alt="logo" src="public/resource/img/logo.png" /> -->
-                <img width="60" alt="logo" src="../../assets/images/lianjia_logo.png" />
+                <img width="60" alt="logo" src="public/resource/img/lianjia_logo.png" />
+                <!-- <img width="60" alt="logo" src="../../assets/images/lianjia_logo.png" /> -->
               </template>
             </ListItem>
           </template>
@@ -199,6 +199,7 @@
   } from '../../api/point';
   import initGaoDe from '../../utils/gaode';
   import addMap from '/@/store/modules/map';
+  import mapContainerWatch from '/@/utils/mapContainerWatch';
 
   // 获取全局唯一map
   let map: Map;
@@ -1269,7 +1270,7 @@
   });
   const subwayWrapperStyle = new Style({
     stroke: new Stroke({
-      color: 'rgb(10,14,12,0.9)',
+      color: 'rgb(255,255,255,0.9)',
       width: 24,
     }),
   });
@@ -1590,6 +1591,7 @@
     map = addMap('container', 'bigscreem');
     mapLevelSearch();
     addLengthScaleTest(map);
+    mapContainerWatch(map);
   });
 </script>
 
