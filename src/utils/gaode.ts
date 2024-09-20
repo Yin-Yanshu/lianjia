@@ -7,7 +7,7 @@ window._AMapSecurityConfig = {
 const AMap = await AMapLoader.load({
   key: '2eabe002d0eabc32258472ea7320e36e',
   version: '1.4.15',
-  plugins: ['AMap.ArrivalRange', 'AMap.Autocomplete', 'AMap.PlaceSearch'],
+  plugins: ['AMap.ArrivalRange', 'AMap.Autocomplete', 'AMap.PlaceSearch', 'AMap.Transfer'],
 });
 
 // 可达性分析接口
@@ -25,16 +25,29 @@ async function initPlaceSearch() {
   return await new AMap.PlaceSearch();
 }
 
+// 路线规划接口，获取位置信息，属性信息
+const transOptions = {
+  city: '上海市',
+  panel: 'panel',
+  policy: AMap.TransferPolicy.LEAST_TIME,
+};
+async function initPathPlaning() {
+  return await new AMap.Transfer(transOptions);
+}
+
 /**
  * 调用高德api
  */
 const arrivalRangePromise = initArrivalRange();
 const autoCompletePromise = initAutoComplete();
 const PlaceSearchPromise = initPlaceSearch();
+const pathPlaningPromise = initPathPlaning();
+
 export default function initGaoDe() {
   return {
     arrivalRangePromise,
     autoCompletePromise,
     PlaceSearchPromise,
+    pathPlaningPromise,
   };
 }
