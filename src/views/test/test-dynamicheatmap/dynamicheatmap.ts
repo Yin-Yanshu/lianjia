@@ -370,7 +370,7 @@ export function useDynamicHeatmap(map: Map) {
     const firstLayer = queue.dequeue();
     firstLayer.getSource().clear();
     featuresNextFrame = [];
-    featuresNextFrame = response[index].timestampHeatmap.map((point) => {
+    featuresNextFrame = response.value[index].timestampHeatmap.map((point) => {
       return new Feature({
         geometry: new Point([point.wgs84_lng, point.wgs84_lat]), // 添加点坐标
       });
