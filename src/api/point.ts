@@ -33,8 +33,8 @@ export interface PlotData {
 }
 
 export interface HeatMapTimeData {
-  start_time: string;
-  end_time: string;
+  start_time: string | null;
+  end_time: string | null;
 }
 
 export const getPointInCircle = (data) => {
@@ -93,13 +93,13 @@ export const getHouseCountInRegion = (data: PolygonData) => {
 
 export const getCurrentHouseHeatMap = () => {
   return defHttp.get({
-    url: '/heatmap',
+    url: '/heatmap/current-house-heatmap',
   });
 };
 
 export const getDynamicHouseHeatMap = (data: HeatMapTimeData) => {
   return defHttp.post({
-    url: '/heatmap',
+    url: '/heatmap/dynamic-heatmap',
     data: {
       ...data,
     },

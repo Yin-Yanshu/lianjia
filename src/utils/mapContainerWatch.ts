@@ -15,13 +15,16 @@ function mapContainerWatch(map: Map) {
     { deep: true },
   );
 }
-function continueUpdateSize(map: Map, time: number, internal = 5) {
-  const number = Math.ceil(time / internal);
-  for (let i = 0; i < number; i++) {
-    setTimeout(() => {
-      map.updateSize();
-    }, i * internal);
+function continueUpdateSize(map: Map, time = 400) {
+  let animationId: number;
+  function updateSize() {
+    map.updateSize();
+    animationId = requestAnimationFrame(updateSize);
   }
+  updateSize();
+  setTimeout(() => {
+    cancelAnimationFrame(animationId);
+  }, time);
 }
 
 export default mapContainerWatch;

@@ -24,6 +24,7 @@
         <!-- TODO 样式调整 -->
         <InputSearch
           v-model:value="placeInfo.name"
+          placeholder="搜索位置"
           @search="placeSearch"
           @focus="inputBlurHandler"
         />
@@ -84,18 +85,22 @@
       <div
         class="middle-item"
         v-if="pathPlaningShow"
-        style="display: flex; flex-direction: column; background-color: #fff"
+        style="
+          display: flex;
+          flex-direction: column;
+          justify-content: space-around;
+          background-color: #fff;
+          padding: 20px;
+        "
       >
-        <Form :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
+        <Form :label-col="{ span: 4 }" :wrapper-col="{ span: 18 }">
           <FormItem label="起点">
             <Input v-model:value="pathPlaningForm.startPlace" @click="activeInputHandler(1)" />
           </FormItem>
           <FormItem label="终点">
             <Input id="2" v-model:value="pathPlaningForm.endPlace" @click="activeInputHandler(2)" />
           </FormItem>
-          <FormItem>
-            <Button @click="pathPlaning">搜索</Button>
-          </FormItem>
+          <Button @click="pathPlaning" style="margin-left: 7%">搜索</Button>
         </Form>
         <List
           class="middle-item-searchlist"
@@ -118,9 +123,13 @@
     <div class="left">
       <div class="left-item left-list-title"
         ><h4>可视区域内找到{{ houseCount }}套房子</h4>
-        <CaretDownOutlined @click="listShow = !listShow" />
+        <CaretDownOutlined
+          :class="{ rotate: listShow }"
+          class="arrow"
+          @click="listShow = !listShow"
+        />
       </div>
-      <div v-if="listShow" class="left-item">
+      <div class="left-item" :class="listShow ? 'left-list-dropdown' : 'left-list-dropup'">
         <List
           class="left-list"
           :data-source="houseList"
@@ -140,7 +149,7 @@
               </ListItemMeta>
 
               <template #extra>
-                <img width="60" alt="logo" src="public/resource/img/lianjia_logo.png" />
+                <img width="60" alt="logo" src="/resource/img/lianjia_logo.png" />
                 <!-- <img width="60" alt="logo" src="../../assets/images/lianjia_logo.png" /> -->
               </template>
             </ListItem>
@@ -149,8 +158,8 @@
       </div>
     </div>
     <div class="down">
-      <img src="public/resource/svg/line.svg" /><span>{{ length }}km</span
-      ><img src="public/resource/svg/line.svg" />
+      <img src="/resource/svg/line.svg" /><span>{{ length }}km</span
+      ><img src="/resource/svg/line.svg" />
     </div>
   </div>
 </template>
@@ -200,6 +209,7 @@
   import initGaoDe from '../../utils/gaode';
   import addMap from '/@/store/modules/map';
   import mapContainerWatch from '/@/utils/mapContainerWatch';
+  import { EventsKey } from 'ol/events';
 
   // 获取全局唯一map
   let map: Map;
@@ -375,46 +385,166 @@
   }
 
   // 获取图层要素信息
-  let subwayLayerAdd = false;
   let circleDraw: Interaction | null;
   let snap: Interaction | null;
 
-  // 监听器
-  let subwaySearchListener;
-  let polygonSearchListener;
-  let arrivalSearchListener;
-  let clickPlotListener;
-  let mapMoveEndListener;
-  let pointMoveListener;
-  let doubleClickListener;
-  let pathPlaningListener;
+  // 监听器管理
+  function listenerManager() {
+    interface removeListenerInfoI {
+      listenerId?: string;
+      listenerGroup?: string;
+    }
+    interface addListenerObjectI {
+      listener: EventsKey;
+      listenerId: string;
+      listenerGroup?: string;
+    }
+    // subwayFunction: {
+    //   '1001-subway': listener;,
+    //   '1002-subway': '',
+    // },
+    const listenerManager = {};
+    function addListener(listenerObject: addListenerObjectI | addListenerObjectI[]) {
+      if (Array.isArray(listenerObject)) {
+        listenerObject.forEach((item) => {
+          addListener(item);
+        });
+        return;
+      }
 
-  // 监听器清除函数，可选保留监听器或全部清除 不提供参数exceptListener则全部清除
-  function listenerClear(exceptListener = null) {
-    // 如果subwaySearchListener存在且subwaySearchListener不等于保留监听器则unByKey
-    if (subwaySearchListener && subwaySearchListener !== exceptListener) {
-      unByKey(subwaySearchListener);
-      subwaySearchListener = null;
+      const { listener, listenerId, listenerGroup } = listenerObject;
+      const group = listenerGroup || listenerId;
+      if (!listenerManager[group]) {
+        listenerManager[group] = {};
+      }
+      listenerManager[group][listenerId] = listener;
     }
-    if (polygonSearchListener && polygonSearchListener !== exceptListener) {
-      unByKey(polygonSearchListener);
-      polygonSearchListener = null;
+    // 传入移出信息形况，
+    // 1.单listenerId
+    // 2.单listenerGroup
+    // 3. listenerId和listenerGroup
+    function removeListener(listenerInfo: removeListenerInfoI) {
+      const { listenerId, listenerGroup } = listenerInfo;
+      // 判断listenerManager是否为空
+      if (Object.keys(listenerManager).length === 0) {
+        console.log('listenerManager为空');
+        return;
+      }
+      // 判断listenerGroup是否为空
+      function isListenerGroupEmpty(listenerGroup: string) {
+        const groupListeners = listenerManager[listenerGroup];
+        return groupListeners && Object.keys(groupListeners).length !== 0 ? false : true;
+      }
+      // 判断listenerId是否为空
+      function isListenerIdEmpty(listenerGroup: string, listenerId: string) {
+        return listenerManager[listenerGroup][listenerId] === undefined;
+      }
+
+      // 移除所有监听器
+      if (!listenerId && !listenerGroup) {
+        Object.keys(listenerManager).forEach((listenerGroup) => {
+          if (isListenerGroupEmpty(listenerGroup)) return;
+
+          Object.keys(listenerManager[listenerGroup]).forEach((listenerId) => {
+            if (!isListenerIdEmpty(listenerGroup, listenerId)) {
+              unByKey(listenerManager[listenerGroup][listenerId]);
+            }
+          });
+          delete listenerManager[listenerGroup];
+        });
+        return;
+      }
+      // 移除单个监听器 传入id定位监听器
+      if (listenerId && !listenerGroup) {
+        Object.keys(listenerManager).forEach((listenerGroup_) => {
+          // 判断listenerGroup是否为空
+          if (isListenerGroupEmpty(listenerGroup_)) return;
+
+          Object.keys(listenerManager[listenerGroup_]).find((listenerId_) => {
+            if (listenerId_ === listenerId && !isListenerIdEmpty(listenerGroup_, listenerId_)) {
+              unByKey(listenerManager[listenerGroup_][listenerId_]);
+              delete listenerManager[listenerGroup_][listenerId_];
+            }
+          });
+        });
+        return;
+      }
+      // 移除group监听器 传入group定位监听器
+      if (!listenerId && listenerGroup) {
+        if (isListenerGroupEmpty(listenerGroup)) return;
+
+        Object.keys(listenerManager[listenerGroup]).forEach((listenerId_) => {
+          if (!isListenerIdEmpty(listenerGroup, listenerId_)) {
+            unByKey(listenerManager[listenerGroup][listenerId_]);
+          }
+        });
+        delete listenerManager[listenerGroup];
+        return;
+      }
+      // 移除单个监听器 传入group和id定位监听器
+      if (listenerId && listenerGroup) {
+        if (isListenerGroupEmpty(listenerGroup)) return;
+        if (isListenerIdEmpty(listenerGroup, listenerId)) return;
+
+        unByKey(listenerManager[listenerGroup][listenerId]);
+        delete listenerManager[listenerGroup][listenerId];
+        return;
+      }
     }
-    if (arrivalSearchListener && arrivalSearchListener !== exceptListener) {
-      unByKey(arrivalSearchListener);
-      arrivalSearchListener = null;
+    function removeListenerExcept(listenerInfo: removeListenerInfoI | removeListenerInfoI[]) {
+      if (Array.isArray(listenerInfo)) {
+        listenerInfo.forEach((item) => {
+          removeListenerExcept(item);
+        });
+        return;
+      }
+
+      const { listenerId, listenerGroup } = listenerInfo;
+      // 移除除listenerId的所有监听器
+      if (listenerId && !listenerGroup) {
+        Object.keys(listenerManager).forEach((listenerGroup) => {
+          Object.keys(listenerManager[listenerGroup]).forEach((listenerId_) => {
+            // 判断是否同id
+            if (!(listenerId_ === listenerId)) {
+              unByKey(listenerManager[listenerGroup][listenerId_]);
+              delete listenerManager[listenerGroup][listenerId_];
+            }
+          });
+        });
+        return;
+      }
+      // 移除所有监听器except listenerGroup
+      if (!listenerId && listenerGroup) {
+        Object.keys(listenerManager).forEach((listenerGroup_) => {
+          // 判断是否同group
+          if (!(listenerGroup === listenerGroup_)) {
+            Object.keys(listenerManager[listenerGroup]).forEach((listenerId_) => {
+              unByKey(listenerManager[listenerGroup][listenerId_]);
+              delete listenerManager[listenerGroup][listenerId_];
+            });
+          }
+        });
+        return;
+      }
     }
-    if (mapMoveEndListener && mapMoveEndListener !== exceptListener) {
-      unByKey(mapMoveEndListener);
-      mapMoveEndListener = null;
+    function getListener(listenerId) {
+      // 获取单个监听器 传入id定位监听器
+      if (listenerId) {
+        Object.keys(listenerManager).forEach((listenerGroup) => {
+          Object.keys(listenerManager[listenerGroup]).find((listenerId_) => {
+            if (listenerId_ === listenerId) {
+              return true;
+            }
+          });
+        });
+        return false;
+      }
     }
-    if (pathPlaningListener && pathPlaningListener !== exceptListener) {
-      unByKey(pathPlaningListener);
-      pathPlaningListener = null;
-    }
+    return { addListener, removeListener, removeListenerExcept, getListener };
   }
 
   let isFirstCall = false;
+  let subwayLayerAdd = false;
   const activeLine = ref('请选择地铁线路');
   // 加载WFS服务图层
   const subwayVectorSource = new VectorSource<Point>({
@@ -475,7 +605,7 @@
   });
 
   function getFeature(map: Map) {
-    listenerClear();
+    removeListener({});
 
     let count = false;
     circleDraw = new Draw({
@@ -513,7 +643,7 @@
     let center;
     let radius;
     // 本项目规范，一定需要定义但未使用的变量采用_前缀
-    subwaySearchListener = circleDraw.on('drawend', async (_event) => {
+    const subwaySearchListener = circleDraw.on('drawend', async (_event) => {
       let param: CircleData = {
         latitude: null,
         longitude: null,
@@ -528,8 +658,19 @@
       addOverlay(map, response.data.plots);
       houseList.value = [...response.data.houseList];
       listShow.value = true;
-      getHouseByClickPlot(map);
     });
+    const clickPlotListener = getHouseByClickPlot(map);
+    const param1 = {
+      listener: clickPlotListener,
+      listenerId: 'clickPlotListener-subwaySearch',
+      listenerGroup: 'subwaySearch',
+    };
+    const param2 = {
+      listener: subwaySearchListener,
+      listenerId: 'subwaySearchListener',
+      listenerGroup: 'subwaySearch',
+    };
+    addListener([param1, param2]);
   }
 
   // 地铁查询清除
@@ -554,7 +695,7 @@
   // 多边形搜索处理
   const listShow = ref(false);
   const houseList = ref([] as any[]);
-  let polygonDraw;
+  let polygonDraw: Draw;
 
   function polygonSearchHandle(index) {
     if (activeButton.value == index) {
@@ -570,7 +711,7 @@
   // INFO 多边形搜索功能
   function polygonSearch() {
     // 清除所有监听器
-    listenerClear();
+    removeListener({});
 
     polygonDraw = new Draw({
       source: new VectorSource(),
@@ -601,9 +742,10 @@
     // 比如const polygon = [];写在draw.on就无法正常清除内部数据
     // gpt解释，每次调用 PolygonSearch 函数时，polygon 数组被清空一次。
     // 但是，如果不在 drawend 事件处理程序内部再进行清空操作，那么数组 polygon 可能会在多次绘制操作之间积累点。
-    polygonSearchListener = polygonDraw.on('drawend', async (event) => {
-      const polygons = event.feature.getGeometry();
-      let coordinates = polygons.getCoordinates();
+    // let clickPlotListener: EventsKey;
+    const polygonSearchListener = polygonDraw.on('drawend', async (event) => {
+      const polygons = event.feature.getGeometry() as Polygon;
+      let coordinates = polygons!.getCoordinates();
       const polygon: PointData[] = [];
       coordinates[0].forEach((item) => {
         let point: PointData = {
@@ -622,9 +764,20 @@
       addOverlay(map, response.data.plots);
       houseList.value = [...response.data.houseList];
       listShow.value = true;
-      // 获取小区信息详细房屋信息
-      clickPlotListener = getHouseByClickPlot(map);
     });
+    // 获取小区信息详细房屋信息
+    const clickPlotListener = getHouseByClickPlot(map);
+    const param1 = {
+      listener: clickPlotListener,
+      listenerId: 'clickPlotListener-polygonSearch',
+      listenerGroup: 'polygonSearch',
+    };
+    const param2 = {
+      listener: polygonSearchListener,
+      listenerId: 'polygonSearchListener',
+      listenerGroup: 'polygonSearch',
+    };
+    addListener([param1, param2]);
   }
 
   function polygonSearchClear() {
@@ -635,10 +788,6 @@
 
   // 点击小区overlay获取详细租房信息
   function getHouseByClickPlot(map: Map) {
-    if (clickPlotListener) {
-      return;
-    }
-
     return map.on('click', async (event) => {
       const features = map.getFeaturesAtPixel(event.pixel);
       if (features.length == 0) {
@@ -692,8 +841,7 @@
     if (activeButton.value == index) {
       drawVectorSource.clear();
       activeButton.value = -1;
-      unByKey(arrivalSearchListener);
-      arrivalSearchListener = null;
+      removeListener({ listenerId: 'arrivalSearchListener' });
     } else {
       arrivalRangeSearch();
       activeButton.value = 2;
@@ -703,8 +851,8 @@
   // INFO 可达范围搜索功能
   function arrivalRangeSearch() {
     // 清除所有监听函数
-    listenerClear();
-    arrivalSearchListener = map.on('click', (event) => {
+    removeListener({});
+    const arrivalSearchListener = map.on('click', (event) => {
       // 处理思路：判断获取到要素是否含有小区overlay要素，未找到则调用高德api
       let pixelCoordinate = map.getCoordinateFromPixel(event.pixel);
       let feature = map.getFeaturesAtPixel(event.pixel);
@@ -752,7 +900,6 @@
             addOverlay(map, response.data.plots);
             houseList.value = [...response.data.houseList];
             listShow.value = true;
-            clickPlotListener = getHouseByClickPlot(map);
           },
           {
             policy: arriveOption.value,
@@ -760,6 +907,18 @@
         );
       });
     });
+    const clickPlotListener = getHouseByClickPlot(map);
+    const param1 = {
+      listener: clickPlotListener,
+      listenerId: 'clickPlotListener-arrivalRangeSearch',
+      listenerGroup: 'arrivalRangeSearch',
+    };
+    const param2 = {
+      listener: arrivalSearchListener,
+      listenerId: 'arrivalSearchListener',
+      listenerGroup: 'arrivalRangeSearch',
+    };
+    addListener([param1, param2]);
   }
 
   // 矢量图层绘制
@@ -835,11 +994,12 @@
 
   const houseCount = ref(0);
 
+  const { addListener, removeListener, removeListenerExcept, getListener } = listenerManager();
   // INFO 地图层级查询
   function mapLevelSearch() {
-    if (mapMoveEndListener) return;
+    if (getListener('mapMoveEndListener')) return;
 
-    mapMoveEndListener = map.on('moveend', async () => {
+    const mapMoveEndListener = map.on('moveend', async () => {
       const viewZoom = map.getView().getZoom();
       const center = map.getView().getCenter();
       if (!viewZoom || !center) return;
@@ -849,22 +1009,27 @@
           regionLayer.setOpacity(0);
           regionOverlayLayer.setOpacity(0);
         }
-        unByKey(pointMoveListener);
-        unByKey(doubleClickListener);
+        removeListener({ listenerId: 'pointMoveListener' });
+        removeListener({ listenerId: 'doubleClickListener' });
         pointerMoveListenerAdded = false;
-        // console.log('center', map.getView().getCenter());
         let param: CircleData = {
           longitude: center[0],
           latitude: center[1],
           radius: 0.01,
         };
+        const clickPlotListener = getHouseByClickPlot(map);
+        const listenerParam = {
+          listener: clickPlotListener,
+          listenerId: 'clickPlotListener-mapLevelSearch',
+          listenerGroup: 'mapLevelSearch',
+        };
+        addListener(listenerParam);
         // 避免频繁发起请求，添加防抖功能
         debounce(async () => {
           param = searchFilter(param);
           const response = await getPlotsInCircle(param);
           houseCount.value = response.data.plots.reduce((sum, plot) => sum + plot.count, 0);
           addOverlay(map, response.data.plots);
-          clickPlotListener = getHouseByClickPlot(map);
           // houseList.value = [...response.data.houseList];
           // listShow.value = true;
         }, 1000)(); // 1000ms 防抖延迟
@@ -927,9 +1092,21 @@
         };
         // 渲染鼠标悬停区域region图层
         if (!pointerMoveListenerAdded) {
-          pointMoveListener = map.on('pointermove', debounce(pointMoveHandle, 100));
-          doubleClickListener = map.on('dblclick', doubleClickHandle);
+          const pointMoveListener = map.on('pointermove', debounce(pointMoveHandle, 100));
+          const doubleClickListener = map.on('dblclick', doubleClickHandle);
           pointerMoveListenerAdded = true;
+
+          const param1 = {
+            listener: pointMoveListener,
+            listenerId: 'pointMoveListener',
+            listenerGroup: 'mapLevelSearch',
+          };
+          const param2 = {
+            listener: doubleClickListener,
+            listenerId: 'doubleClickListener',
+            listenerGroup: 'mapLevelSearch',
+          };
+          addListener([param1, param2]);
         }
         // 加载regionoverlay租房数量信息
         if (regionOverlayLayerAdd === false) {
@@ -955,17 +1132,17 @@
         }
       }
     });
+
+    const param = {
+      listener: mapMoveEndListener,
+      listenerId: 'mapMoveEndListener',
+      listenerGroup: 'mapLevelSearch',
+    };
+    addListener(param);
   }
 
   function mapLevelSearchClear() {
-    unByKey(pointMoveListener);
-    unByKey(doubleClickListener);
-    pointMoveListener = null;
-    unByKey(mapMoveEndListener);
-    mapMoveEndListener = null;
-    unByKey(clickPlotListener);
-    clickPlotListener = null;
-    pointerMoveListenerAdded = false;
+    removeListener({ listenerGroup: 'mapLevelSearch' });
     // 调节图层透明度为0
     regionLayer.setOpacity(0);
     regionOverlayLayer.setOpacity(0);
@@ -1160,12 +1337,18 @@
       latitude: Number(placeInfo.location.latitude),
       radius: 0.01,
     };
+    const clickPlotListener = getHouseByClickPlot(map);
+    const listenerParam = {
+      listener: clickPlotListener,
+      listenerId: 'clickPlotListener-placeSearch',
+      listenerGroup: 'placeSearch',
+    };
+    addListener(listenerParam);
     debounce(async () => {
       param = searchFilter(param);
       const response = await getPlotsInCircle(param);
       houseCount.value = response.data.plots.reduce((sum, plot) => sum + plot.count, 0);
       addOverlay(map, response.data.plots);
-      clickPlotListener = getHouseByClickPlot(map);
       houseList.value = [...response.data.houseList];
       listShow.value = true;
     }, 1000)();
@@ -1444,7 +1627,8 @@
    * 输入起终地点名进行路径规划
    */
   function pathPlaning() {
-    listenerClear();
+    // listenerClear();
+    removeListener({});
     pathPlaningPromise.then((pathPlaning) => {
       pathPlaning.search(
         [{ keyword: pathPlaningForm.startPlace }, { keyword: pathPlaningForm.endPlace }],
@@ -1522,11 +1706,18 @@
     });
 
     // 更新比例尺时更新箭头数量和指向
-    listenerClear(pathPlaningListener);
-    pathPlaningListener = map.getView().on('change:resolution', () => {
+    // listenerClear(pathPlaningListener);
+    removeListenerExcept({ listenerId: 'pathPlaningListener' });
+    const pathPlaningListener = map.getView().on('change:resolution', () => {
       // 计算箭头数量
       calculateArrowPoints(lineFeatureList);
     });
+    const listenerParam = {
+      listener: pathPlaningListener,
+      listenerId: 'pathPlaningListener',
+      listenerGroup: 'pathPlaning',
+    };
+    addListener(listenerParam);
   }
   let arrowPoints: Feature<Point>[];
   function calculateArrowPoints(lineFeatureList) {
@@ -1587,6 +1778,26 @@
     }
   });
 
+  // TODO 设计一个活动函数管理器
+  // 实现active函数的控制，实现单例active函数 可同时active函数的控制
+  // function useFunctionManager() {
+  //   const functionObject = {
+  //     functionName: 'function',
+  //     type: 'one' || 'stay',
+  //     status: 'active' || 'stop',
+  //   };
+  //   const functionManager = {
+  //     function1Name: {
+  //       type: 'one',
+  //       status: 'active',
+  //     },
+  //     function2Name: {
+  //       type: 'stay',
+  //       status: 'stop',
+  //     },
+  //   };
+  // }
+
   onMounted(() => {
     map = addMap('container', 'bigscreem');
     mapLevelSearch();
@@ -1600,27 +1811,30 @@
     width: 100%;
     height: 100%;
 
+    .ant-btn {
+      height: 40px;
+      border-radius: 8px;
+    }
+
     .right {
       position: absolute;
       top: 4%;
       right: 4%;
-      width: 30%;
+      // width: 30%;
       display: flex;
       justify-content: space-between;
       z-index: 999;
 
       .right-item {
         position: relative;
-        width: 80%;
-        height: 50px;
+        width: 100%;
       }
     }
 
     .slider-container {
-      position: absolute;
-      top: 30%;
-      width: 100%;
-      height: 100%;
+      padding-left: 40px;
+      top: 40%;
+      height: 150px;
       z-index: 999;
     }
 
@@ -1637,10 +1851,19 @@
       .left-item {
         background-color: #fff;
         width: 100%;
+
+        .arrow {
+          transition: transform 0.3s linear;
+        }
+
+        .rotate {
+          transform: rotate(180deg);
+          transition: transform 0.3s linear;
+        }
       }
 
       .left-list-title {
-        height: 50px;
+        height: 40px;
         display: flex;
         justify-content: space-around;
         align-items: center;
@@ -1648,7 +1871,40 @@
 
       .left-list {
         padding: 20px;
-        height: 600px;
+        height: 100%;
+      }
+      .left-list-dropdown {
+        border-bottom-left-radius: 10px;
+        border-bottom-right-radius: 10px;
+        overflow: hidden;
+        display: block;
+        animation: movein 1s;
+      }
+      .left-list-dropup {
+        border-bottom-left-radius: 10px;
+        border-bottom-right-radius: 10px;
+        overflow: hidden;
+        display: none;
+        animation: moveout 1s;
+      }
+      /* 进入动画 */
+      @keyframes movein {
+        0% {
+          max-height: 0px;
+        }
+        100% {
+          max-height: 600px;
+        }
+      }
+      @keyframes moveout {
+        0% {
+          max-height: 600px;
+          display: block;
+        }
+        100% {
+          max-height: 0px;
+          display: block;
+        }
       }
     }
 
@@ -1666,28 +1922,16 @@
         justify-content: space-between;
       }
 
-      .middle-item-leaseform {
-        width: 100%;
-        background-color: #fff;
-        padding-top: 10px;
-        padding-left: 20px;
-        padding-right: 20px;
-      }
-
-      .middle-item-priceform {
-        width: 100%;
-        background-color: #fff;
-        padding-top: 10px;
-        padding-left: 20px;
-        padding-right: 20px;
-      }
-
+      .middle-item-leaseform,
+      .middle-item-priceform,
       .middle-item-searchlist {
         width: 100%;
         background-color: #fff;
-        padding-top: 10px;
-        padding-left: 20px;
-        padding-right: 20px;
+        padding: 20px;
+        cursor: pointer;
+      }
+      .middle-item-searchlist :v-deep(.ant-list-item:hover) {
+        background-color: #eeeeee;
       }
     }
 

@@ -2,21 +2,23 @@
   <div class="container">
     <GrowCard :loading="loading" class="enter-y" />
     <div class="wrapper">
-      <div id="map-container"></div>
+      <div id="map-container">
+        <RangePicker
+          :value="hackValue || value"
+          :disabled-date="disabledDate"
+          @change="onChange"
+          @openChange="onOpenChange"
+          @calendarChange="onCalendarChange"
+          class="time-picker"
+        />
+        <Button class="time-picker-button" @click="buttonClick">查询</Button>
+      </div>
       <div class="pie-container">
         <HouseTypePie />
         <HousePricePie />
+        <RangePicker @change="onChange" />
       </div>
     </div>
-
-    <a-range-picker
-      :value="hackValue || value"
-      :disabled-date="disabledDate"
-      @change="onChange"
-      @openChange="onOpenChange"
-      @calendarChange="onCalendarChange"
-      class="time-picker"
-    />
   </div>
 </template>
 <script lang="ts" setup>
@@ -30,9 +32,11 @@
   import GrowCard from './components/GrowCard.vue';
   import HousePricePie from './components/HousePricePie.vue';
   import HouseTypePie from './components/HouseTypePie.vue';
-  import { getDynamicHouseHeatMap, HeatMapTimeData } from '/@/api/point';
+  import { getCurrentHouseHeatMap, HeatMapTimeData } from '/@/api/point';
   import addMap from '/@/store/modules/map';
   import mapContainerWatch from '/@/utils/mapContainerWatch';
+  import { addDynamicHeatMap } from '/@/utils/addDynamicHeatmap';
+  import { RangePicker, Button } from 'ant-design-vue';
 
   const loading = ref(true);
 
@@ -64,6 +68,9 @@
       map.addLayer(heatMapLayer);
     }
   }
+  function clearHeatMap() {
+    heatMapSource.clear();
+  }
 
   type RangeValue = [Moment, Moment];
   const dates = ref<RangeValue>();
@@ -74,8 +81,8 @@
     if (!dates.value || (dates.value as any).length === 0) {
       return false;
     }
-    const tooLate = dates.value[0] && current.diff(dates.value[0], 'days') > 120;
-    const tooEarly = dates.value[1] && dates.value[1].diff(current, 'days') > 120;
+    const tooLate = dates.value[0] && current.diff(dates.value[0], 'days') > 30;
+    const tooEarly = dates.value[1] && dates.value[1].diff(current, 'days') > 30;
     return tooEarly || tooLate;
   };
 
@@ -95,16 +102,23 @@
   const onCalendarChange = (val: RangeValue) => {
     dates.value = val;
   };
+
+  const buttonClick = async () => {
+    if (value.value) {
+      let params = {} as HeatMapTimeData;
+      params.start_time = value.value[0].format('YYYY-MM-DD');
+      params.end_time = value.value[1].format('YYYY-MM-DD');
+      console.log('params', params);
+      clearHeatMap();
+      await addDynamicHeatMap(map, params);
+    }
+  };
   // 获取全局唯一map
   let map;
   onMounted(() => {
     map = addMap('map-container', 'analysis');
-    // AddHeatMap(map, getCurrentHouseHeatMap);
-    const params: HeatMapTimeData = {
-      start_time: '2024-01-10',
-      end_time: '2024-02-10',
-    };
-    AddHeatMap(map, getDynamicHouseHeatMap, params);
+    // TODO 引用test-dynamicheatmap实现功能
+    AddHeatMap(map, getCurrentHouseHeatMap);
     mapContainerWatch(map);
   });
 
@@ -131,6 +145,22 @@
       padding-bottom: 0%;
       width: 67%;
       height: 100%;
+      position: relative;
+      .time-picker {
+        width: 400px;
+        height: 100px;
+        position: absolute;
+        top: 16px;
+        right: 116px;
+        z-index: 10;
+      }
+      .time-picker-button {
+        width: 100px;
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        z-index: 10;
+      }
     }
 
     .pie-container {
@@ -143,10 +173,5 @@
       padding-left: 0px;
       padding-bottom: 0%;
     }
-  }
-
-  .time-picker {
-    width: 100px;
-    height: 100px;
   }
 </style>

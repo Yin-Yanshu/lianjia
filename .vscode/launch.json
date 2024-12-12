@@ -4,14 +4,11 @@
     {
       "type": "chrome",
       "request": "launch",
-      "name": "Launch Chrome",
+      "name": "Edge 调试",
       "url": "http://localhost:3100",
-      "webRoot": "${workspaceFolder}/src",
+      "webRoot": "${workspaceFolder}",
       "sourceMaps": true,
-      "runtimeExecutable": "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
-      "sourceMapPathOverrides": {
-        "webpack:///./*": "${webRoot}/*"
-      }
+      "runtimeExecutable": "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
     }
   ]
 }
