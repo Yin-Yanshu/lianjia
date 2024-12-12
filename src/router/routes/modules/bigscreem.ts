@@ -10,7 +10,7 @@ const dashboard: AppRouteModule = {
   redirect: '/bigcsreem/index',
   meta: {
     hideChildrenInMenu: true,
-    icon: 'simple-icons:about-dot-me',
+    icon: 'ant-design:fund-outlined',
     title: t('routes.dashboard.bigscreem'),
     orderNo: 100000,
   },
