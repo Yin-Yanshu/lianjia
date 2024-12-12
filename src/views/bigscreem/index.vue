@@ -24,6 +24,7 @@
         <!-- TODO 样式调整 -->
         <InputSearch
           v-model:value="placeInfo.name"
+          placeholder="搜索位置"
           @search="placeSearch"
           @focus="inputBlurHandler"
         />
@@ -84,18 +85,22 @@
       <div
         class="middle-item"
         v-if="pathPlaningShow"
-        style="display: flex; flex-direction: column; background-color: #fff"
+        style="
+          display: flex;
+          flex-direction: column;
+          justify-content: space-around;
+          background-color: #fff;
+          padding: 20px;
+        "
       >
-        <Form :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
+        <Form :label-col="{ span: 4 }" :wrapper-col="{ span: 18 }">
           <FormItem label="起点">
             <Input v-model:value="pathPlaningForm.startPlace" @click="activeInputHandler(1)" />
           </FormItem>
           <FormItem label="终点">
             <Input id="2" v-model:value="pathPlaningForm.endPlace" @click="activeInputHandler(2)" />
           </FormItem>
-          <FormItem>
-            <Button @click="pathPlaning">搜索</Button>
-          </FormItem>
+          <Button @click="pathPlaning" style="margin-left: 7%">搜索</Button>
         </Form>
         <List
           class="middle-item-searchlist"
@@ -118,9 +123,13 @@
     <div class="left">
       <div class="left-item left-list-title"
         ><h4>可视区域内找到{{ houseCount }}套房子</h4>
-        <CaretDownOutlined @click="listShow = !listShow" />
+        <CaretDownOutlined
+          :class="{ rotate: listShow }"
+          class="arrow"
+          @click="listShow = !listShow"
+        />
       </div>
-      <div v-if="listShow" class="left-item">
+      <div class="left-item" :class="listShow ? 'left-list-dropdown' : 'left-list-dropup'">
         <List
           class="left-list"
           :data-source="houseList"
@@ -140,7 +149,7 @@
               </ListItemMeta>
 
               <template #extra>
-                <img width="60" alt="logo" src="public/resource/img/lianjia_logo.png" />
+                <img width="60" alt="logo" src="/resource/img/lianjia_logo.png" />
                 <!-- <img width="60" alt="logo" src="../../assets/images/lianjia_logo.png" /> -->
               </template>
             </ListItem>
@@ -149,8 +158,8 @@
       </div>
     </div>
     <div class="down">
-      <img src="public/resource/svg/line.svg" /><span>{{ length }}km</span
-      ><img src="public/resource/svg/line.svg" />
+      <img src="/resource/svg/line.svg" /><span>{{ length }}km</span
+      ><img src="/resource/svg/line.svg" />
     </div>
   </div>
 </template>
@@ -376,7 +385,6 @@
   }
 
   // 获取图层要素信息
-  let subwayLayerAdd = false;
   let circleDraw: Interaction | null;
   let snap: Interaction | null;
 
@@ -536,6 +544,7 @@
   }
 
   let isFirstCall = false;
+  let subwayLayerAdd = false;
   const activeLine = ref('请选择地铁线路');
   // 加载WFS服务图层
   const subwayVectorSource = new VectorSource<Point>({
@@ -1345,7 +1354,6 @@
     }, 1000)();
   }
 
-  // TODO 封装为hooks
   const length = ref();
 
   function addLengthScaleTest(map: Map) {
@@ -1803,27 +1811,30 @@
     width: 100%;
     height: 100%;
 
+    .ant-btn {
+      height: 40px;
+      border-radius: 8px;
+    }
+
     .right {
       position: absolute;
       top: 4%;
       right: 4%;
-      width: 30%;
+      // width: 30%;
       display: flex;
       justify-content: space-between;
       z-index: 999;
 
       .right-item {
         position: relative;
-        width: 80%;
-        height: 50px;
+        width: 100%;
       }
     }
 
     .slider-container {
-      position: absolute;
-      top: 30%;
-      width: 100%;
-      height: 100%;
+      padding-left: 40px;
+      top: 40%;
+      height: 150px;
       z-index: 999;
     }
 
@@ -1840,10 +1851,19 @@
       .left-item {
         background-color: #fff;
         width: 100%;
+
+        .arrow {
+          transition: transform 0.3s linear;
+        }
+
+        .rotate {
+          transform: rotate(180deg);
+          transition: transform 0.3s linear;
+        }
       }
 
       .left-list-title {
-        height: 50px;
+        height: 40px;
         display: flex;
         justify-content: space-around;
         align-items: center;
@@ -1851,7 +1871,40 @@
 
       .left-list {
         padding: 20px;
-        height: 600px;
+        height: 100%;
+      }
+      .left-list-dropdown {
+        border-bottom-left-radius: 10px;
+        border-bottom-right-radius: 10px;
+        overflow: hidden;
+        display: block;
+        animation: movein 1s;
+      }
+      .left-list-dropup {
+        border-bottom-left-radius: 10px;
+        border-bottom-right-radius: 10px;
+        overflow: hidden;
+        display: none;
+        animation: moveout 1s;
+      }
+      /* 进入动画 */
+      @keyframes movein {
+        0% {
+          max-height: 0px;
+        }
+        100% {
+          max-height: 600px;
+        }
+      }
+      @keyframes moveout {
+        0% {
+          max-height: 600px;
+          display: block;
+        }
+        100% {
+          max-height: 0px;
+          display: block;
+        }
       }
     }
 
@@ -1869,28 +1922,16 @@
         justify-content: space-between;
       }
 
-      .middle-item-leaseform {
-        width: 100%;
-        background-color: #fff;
-        padding-top: 10px;
-        padding-left: 20px;
-        padding-right: 20px;
-      }
-
-      .middle-item-priceform {
-        width: 100%;
-        background-color: #fff;
-        padding-top: 10px;
-        padding-left: 20px;
-        padding-right: 20px;
-      }
-
+      .middle-item-leaseform,
+      .middle-item-priceform,
       .middle-item-searchlist {
         width: 100%;
         background-color: #fff;
-        padding-top: 10px;
-        padding-left: 20px;
-        padding-right: 20px;
+        padding: 20px;
+        cursor: pointer;
+      }
+      .middle-item-searchlist :v-deep(.ant-list-item:hover) {
+        background-color: #eeeeee;
       }
     }
 
