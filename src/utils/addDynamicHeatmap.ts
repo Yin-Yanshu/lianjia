@@ -4,6 +4,7 @@ import { Point } from 'ol/geom';
 import Heatmap from 'ol/layer/Heatmap';
 import VectorSource from 'ol/source/Vector';
 import { getDynamicHouseHeatMap, HeatMapTimeData } from '../api/point';
+import { unByKey } from 'ol/Observable';
 
 let response;
 let featuresFrontFrame: Feature<Point>[] = [];
@@ -59,6 +60,7 @@ function changeLayer(queue, index) {
   queue.enqueue(firstLayer);
 }
 function changeOpacity(
+  map: Map,
   frontLayer: Heatmap | undefined,
   backLayer: Heatmap | undefined,
   changeTime?: number,
@@ -76,25 +78,33 @@ function changeOpacity(
     let opacity = 0;
     let lastTime = performance.now(); // 获取当前时间
 
-    const step = (currentTime: number) => {
+    let prerenderListener;
+    prerenderListener = heatMapLayer1.on('prerender', (_event) => {
+      const currentTime = performance.now();
       const deltaTime = currentTime - lastTime;
 
       if (deltaTime >= interval) {
-        // 当时间差达到或超过设定的间隔时才更新 opacity
+        // 只有当时间差达到或超过设定的间隔时才更新 opacity
         lastTime = currentTime;
         opacity += 0.01;
         frontLayer!.setOpacity(1 - opacity);
         backLayer!.setOpacity(opacity);
-      }
-
-      if (opacity <= 1) {
-        requestAnimationFrame(step); // 继续下一帧
+        map.render();
       } else {
+        map.render();
+      }
+      // 以下方法无法实现播放速率控制
+      // opacity += 0.01;
+      // frontLayer!.setOpacity(1 - opacity);
+      // backLayer!.setOpacity(opacity);
+      // map.render();
+      if (opacity >= 1) {
+        console.log(opacity);
+        unByKey(prerenderListener);
+        prerenderListener = null;
         resolve(true);
       }
-    };
-
-    requestAnimationFrame(step); // 开始动画循环
+    });
   });
 }
 class Queue<T> {
@@ -153,7 +163,7 @@ export async function addDynamicHeatMap(map: Map, params: HeatMapTimeData, chang
   while (true) {
     let count = 2;
     for (let i = 0; i < length - 1; i++) {
-      await changeOpacity(queue.getElement(0), queue.getElement(1), changeTime);
+      await changeOpacity(map, queue.getElement(0), queue.getElement(1), changeTime);
       if (count !== length) {
         changeLayer(queue, count);
         count++;
