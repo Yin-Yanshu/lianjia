@@ -9,7 +9,7 @@ const infosearch: AppRouteModule = {
   redirect: '/infosearch/index',
   meta: {
     hideChildrenInMenu: true,
-    icon: 'simple-icons:about-dot-me',
+    icon: 'ant-design:search-outlined',
     title: '信息查询',
     orderNo: 100000,
   },
@@ -20,7 +20,6 @@ const infosearch: AppRouteModule = {
       component: () => import('/@/views/infosearch/index.vue'),
       meta: {
         title: '信息查询',
-        icon: 'simple-icons:about-dot-me',
         hideMenu: true,
       },
     },

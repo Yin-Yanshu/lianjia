@@ -10,7 +10,7 @@ const test: AppRouteModule = {
   redirect: '/test/spherephoto',
   meta: {
     orderNo: 10,
-    icon: 'ion:grid-outline',
+    icon: 'ant-design:bug-outlined',
     title: t('routes.dashboard.test'),
   },
   children: [
