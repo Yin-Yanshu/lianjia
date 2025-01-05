@@ -1,7 +1,7 @@
-import type { UserConfig, ConfigEnv } from 'vite';
+import type { ConfigEnv, UserConfig } from 'vite';
+import { loadEnv } from 'vite';
 import pkg from './package.json';
 import moment from 'moment';
-import { loadEnv } from 'vite';
 import { resolve } from 'path';
 import { generateModifyVars } from './build/generate/generateModifyVars';
 import { createProxy } from './build/vite/proxy';
@@ -9,6 +9,7 @@ import { wrapperEnv } from './build/utils';
 import { createVitePlugins } from './build/vite/plugin';
 import { OUTPUT_DIR } from './build/constant';
 
+// FIXME 这个转换函数似乎有问题process.cwd()获取绝对路径后应该不需要再加. 直接process.cwd() dir
 function pathResolve(dir: string) {
   return resolve(process.cwd(), '.', dir);
 }

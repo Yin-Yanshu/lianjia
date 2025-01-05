@@ -22,6 +22,24 @@ declare global {
   //   __APP__: App<Element>;
   // }
 
+  // 在vite中已提供了对静态资源的.d.ts声明,无需自定义
+  // declare module '*.png' {
+  //   const src: string;
+  //   export default src;
+  // }
+  // declare module '*.jpg' {
+  //   const src: string;
+  //   export default src;
+  // }
+  // declare module '*.jpeg' {
+  //   const src: string;
+  //   export default src;
+  // }
+  // declare module '*.svg' {
+  //   const src: string;
+  //   export default src;
+  // }
+
   // vue
   declare type PropType<T> = VuePropType<T>;
   declare type VueNode = VNodeChild | JSX.Element;
