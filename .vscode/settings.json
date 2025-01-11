@@ -138,5 +138,10 @@
     "brotli",
     "tailwindcss",
     "sider"
-  ]
+  ],
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.patterns": {
+    "vite.config.ts": "*.json, *.config.js, *.config.ts, *.config.mjs, README*, .env*, CHANGELOG*, LICENSE*, .*ignore, *gitpod.yml, .eslint*, .yarnclean"
+  }
+  // "editor.acceptSuggestionOnCommitCharacter": false
 }

@@ -147,6 +147,7 @@ export interface GlobConfig {
   // Project abbreviation
   shortName: string;
   staticUrl?: string;
+  geoserverUrl?: string;
 }
 export interface GlobEnvConfig {
   // Site title
@@ -161,4 +162,6 @@ export interface GlobEnvConfig {
   VITE_GLOB_UPLOAD_URL?: string;
 
   VITE_GLOB_STATIC_URL?: string;
+
+  VITE_GLOB_GEOSERVER_URL?: string;
 }

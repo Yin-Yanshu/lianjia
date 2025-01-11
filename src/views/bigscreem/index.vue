@@ -150,7 +150,7 @@
 
               <template #extra>
                 <img width="60" alt="logo" src="/resource/img/lianjia_logo.png" />
-                <!-- <img width="60" alt="logo" src="../../assets/images/lianjia_logo.png" /> -->
+                <!-- <img width="60" alt="logo" :src="`${staticUrl}/${item.overview_path}`" /> -->
               </template>
             </ListItem>
           </template>
@@ -210,6 +210,9 @@
   import addMap from '/@/store/modules/map';
   import mapContainerWatch from '/@/utils/mapContainerWatch';
   import { EventsKey } from 'ol/events';
+  import { useGlobSetting } from '/@/hooks/setting';
+
+  const { staticUrl, geoserverUrl } = useGlobSetting();
 
   // 获取全局唯一map
   let map: Map;
@@ -217,27 +220,37 @@
     lineOne: {
       label: '一号线',
       value: 'lineOne',
-      url: 'http://localhost:8080/geoserver/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Ashanghai_subawy_line1&maxFeatures=50&outputFormat=application%2Fjson',
+      url:
+        geoserverUrl +
+        '/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Ashanghai_subawy_line1&maxFeatures=50&outputFormat=application%2Fjson',
     },
     lineTwo: {
       label: '二号线',
       value: 'lineTwo',
-      url: 'http://localhost:8080/geoserver/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Ashanghai_subawy_line2&maxFeatures=50&outputFormat=application%2Fjson',
+      url:
+        geoserverUrl +
+        '/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Ashanghai_subawy_line2&maxFeatures=50&outputFormat=application%2Fjson',
     },
     lineThree: {
       label: '三号线',
       value: 'lineThree',
-      url: 'http://localhost:8080/geoserver/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Ashanghai_subawy_line3&maxFeatures=50&outputFormat=application%2Fjson',
+      url:
+        geoserverUrl +
+        '/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Ashanghai_subawy_line3&maxFeatures=50&outputFormat=application%2Fjson',
     },
     lineFour: {
       label: '四号线',
       value: 'lineFour',
-      url: 'http://localhost:8080/geoserver/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Ashanghai_subawy_line4&maxFeatures=50&outputFormat=application%2Fjson',
+      url:
+        geoserverUrl +
+        '/geoserver/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Ashanghai_subawy_line4&maxFeatures=50&outputFormat=application%2Fjson',
     },
     lineFive: {
       label: '五号线',
       value: 'lineFive',
-      url: 'http://localhost:8080/geoserver/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Ashanghai_subawy_line5&maxFeatures=50&outputFormat=application%2Fjson',
+      url:
+        geoserverUrl +
+        '/geoserver/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Ashanghai_subawy_line5&maxFeatures=50&outputFormat=application%2Fjson',
     },
   };
 
@@ -982,8 +995,9 @@
   });
   const regionSource = new VectorSource({
     format: new GeoJSON(),
-    // url: 'http://localhost:8080/geoserver/lianjia/gwc/demo/lianjia:region?gridSet=EPSG:4326&format=application/json;type=geojson',
-    url: 'http://localhost:8080/geoserver/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Aregion&maxFeatures=50&outputFormat=application%2Fjson',
+    url:
+      geoserverUrl +
+      '/lianjia/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=lianjia%3Aregion&maxFeatures=50&outputFormat=application%2Fjson',
   });
   // 如想使用矢量切片方式加载region数据需使用VectorTile图层类和VectorTile数据源类并编写切片方法
   const regionLayer = new VectorLayer({
