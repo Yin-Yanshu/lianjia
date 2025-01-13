@@ -135,28 +135,28 @@
   });
   const startIcon = new Style({
     image: new Icon({
-      src: 'public/resource/svg/start-point.svg',
+      src: '/resource/svg/start-point.svg',
       imgSize: [200, 200],
       scale: [0.2, 0.2],
     }),
   });
   const endIcon = new Style({
     image: new Icon({
-      src: 'public/resource/svg/end-point.svg',
+      src: '/resource/svg/end-point.svg',
       imgSize: [200, 200],
       scale: [0.2, 0.2],
     }),
   });
   const busIcon = new Style({
     image: new Icon({
-      src: 'public/resource/svg/bus.svg',
+      src: '/resource/svg/bus.svg',
       imgSize: [200, 200],
       scale: [0.15, 0.15],
     }),
   });
   const subwayIcon = new Style({
     image: new Icon({
-      src: 'public/resource/svg/subway.svg',
+      src: '/resource/svg/subway.svg',
       imgSize: [200, 200],
       scale: [0.2, 0.2],
     }),
@@ -206,7 +206,7 @@
             rotation = dy > 0 ? rotation : Math.PI + rotation;
             returnStyle = new Style({
               image: new Icon({
-                src: 'public/resource/svg/path-arrow.svg',
+                src: '/resource/svg/path-arrow.svg',
                 imgSize: [200, 200],
                 scale: arrow_scale[transit_mode] || [0.1, 0.1],
                 rotation: rotation,

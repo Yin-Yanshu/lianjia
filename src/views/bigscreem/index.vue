@@ -29,22 +29,18 @@
           @focus="inputBlurHandler"
         />
         <Button @click="activeButtonHandle(3)">规划</Button>
-        <Button @click="propertiesActiveButtonHandle(0)">方式</Button>
+        <Button @click="propertiesActiveButtonHandle(0)">户型</Button>
         <Button @click="propertiesActiveButtonHandle(1)">租金</Button>
         <Button @click="searchFilterHandle(0)">清空筛选</Button>
       </div>
       <div class="middle-item" v-if="propertyFromShow === 0">
         <Form class="middle-item-leaseform">
           <FormItem>
-            <CheckboxGroup v-model:value="lease_typeCheck">
-              <Checkbox :value="0">整租</Checkbox>
-              <Checkbox :value="1">合租</Checkbox>
-              <!-- <Checkbox
-                :checked="lease_typeCheck[0] === 1"
-                :value="1"
-                @change="handleCheckboxChange(1)"
-                >合租</Checkbox
-              > -->
+            <CheckboxGroup v-model:value="room_number">
+              <Checkbox :value="0">一室</Checkbox>
+              <Checkbox :value="1">两室</Checkbox>
+              <Checkbox :value="2">三室</Checkbox>
+              <Checkbox :value="3">四室+</Checkbox>
             </CheckboxGroup>
           </FormItem>
           <FormItem>
@@ -310,7 +306,7 @@
   let propertyFromShow = ref(-1);
   // 过滤器选项
   let option: OptionData = {};
-  const lease_typeCheck = ref([]);
+  const room_number = ref([]);
   const priceSliderValue = ref<[number, number]>([2000, 5000]);
 
   /**
@@ -337,10 +333,15 @@
         break;
       // 确认增加 方式 过滤
       case 2:
-        if (lease_typeCheck.value[0] === 0) {
+        if (room_number.value[0] === 0) {
           option.lease_type = '整租';
-        } else if (lease_typeCheck.value[0] === 1) {
+        } else if (room_number.value[0] === 1) {
           option.lease_type = '合租';
+        }
+        if (room_number.value.length !== 0) {
+          option.room_number = room_number.value.map((item) => {
+            return item + 1;
+          }) as unknown as number[];
         }
         propertyFromShow.value = -1;
         break;
@@ -1565,7 +1566,7 @@
             rotation = dy > 0 ? rotation : Math.PI + rotation;
             returnStyle = new Style({
               image: new Icon({
-                src: 'public/resource/svg/path-arrow.svg',
+                src: '/resource/svg/path-arrow.svg',
                 imgSize: [200, 200],
                 scale: arrow_scale[transit_mode] || [0.1, 0.1],
                 rotation: rotation,
@@ -1577,30 +1578,32 @@
       return returnStyle;
     },
   });
+  // FIXME 使用public绝对路径在正式环境中可以访问到吗
+  // 内部使用image = new Image()创建的图片 image.src = '文件路径'加载图片,在开发环境使用public路径无法加载
   const startIcon = new Style({
     image: new Icon({
-      src: 'public/resource/svg/start-point.svg',
+      src: '/resource/svg/start-point.svg',
       imgSize: [200, 200],
       scale: [0.2, 0.2],
     }),
   });
   const endIcon = new Style({
     image: new Icon({
-      src: 'public/resource/svg/end-point.svg',
+      src: '/resource/svg/end-point.svg',
       imgSize: [200, 200],
       scale: [0.2, 0.2],
     }),
   });
   const busIcon = new Style({
     image: new Icon({
-      src: 'public/resource/svg/bus.svg',
+      src: '/resource/svg/bus.svg',
       imgSize: [200, 200],
       scale: [0.15, 0.15],
     }),
   });
   const subwayIcon = new Style({
     image: new Icon({
-      src: 'public/resource/svg/subway.svg',
+      src: '/resource/svg/subway.svg',
       imgSize: [200, 200],
       scale: [0.2, 0.2],
     }),
