@@ -90,12 +90,12 @@ export const useUserStore = defineStore({
     ): Promise<GetUserInfoModel | null> {
       try {
         const { goHome = true, mode, ...loginParams } = params;
-        const data = await loginApi(loginParams, mode);
-        const { token } = data;
+        // const data = await loginApi(loginParams, mode);
+        // const { token } = data;
+        const token = 'faketoken';
 
         // save token
         this.setToken(token);
-        // this.setToken('faketoken');
         return this.afterLoginAction(goHome);
       } catch (error) {
         return Promise.reject(error);
@@ -104,7 +104,20 @@ export const useUserStore = defineStore({
     async afterLoginAction(goHome?: boolean): Promise<GetUserInfoModel | null> {
       if (!this.getToken) return null;
       // get user info
-      const userInfo = await this.getUserInfoAction();
+      // const userInfo = await this.getUserInfoAction();
+      const userInfo = {
+        roles: [
+          {
+            roleName: 'Super Admin',
+            value: 'super',
+          },
+        ],
+        userId: '1',
+        username: 'vben',
+        token: 'fakeToken1',
+        realName: 'YYS',
+        desc: 'manager',
+      };
 
       const sessionTimeout = this.sessionTimeout;
       if (sessionTimeout) {
@@ -140,14 +153,14 @@ export const useUserStore = defineStore({
     /**
      * @description: logout
      */
-    async logout(goLogin = false) {
-      if (this.getToken) {
-        try {
-          await doLogout();
-        } catch {
-          console.log('注销Token失败');
-        }
-      }
+    logout(goLogin = false) {
+      // if (this.getToken) {
+      //   try {
+      //     await doLogout();
+      //   } catch {
+      //     console.log('注销Token失败');
+      //   }
+      // }
       this.setToken(undefined);
       this.setSessionTimeout(false);
       this.setUserInfo(null);
@@ -158,16 +171,17 @@ export const useUserStore = defineStore({
      * @description: Confirm before logging out
      */
     confirmLoginOut() {
-      const { createConfirm } = useMessage();
-      const { t } = useI18n();
-      createConfirm({
-        iconType: 'warning',
-        title: () => h('span', t('sys.app.logoutTip')),
-        content: () => h('span', t('sys.app.logoutMessage')),
-        onOk: async () => {
-          await this.logout(true);
-        },
-      });
+      // const { createConfirm } = useMessage();
+      // const { t } = useI18n();
+      // createConfirm({
+      //   iconType: 'warning',
+      //   title: () => h('span', t('sys.app.logoutTip')),
+      //   content: () => h('span', t('sys.app.logoutMessage')),
+      //   onOk: async () => {
+      //     await this.logout(true);
+      //   },
+      // });
+      this.logout(true);
     },
   },
 });
