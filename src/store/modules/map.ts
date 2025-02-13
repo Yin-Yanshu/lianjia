@@ -1,10 +1,15 @@
 import TileLayer from 'ol/layer/Tile';
 import { Map, View } from 'ol';
+import type { Map as OlMap } from 'ol';
 import { defaults } from 'ol/interaction';
 import { XYZ } from 'ol/source';
 
+interface MapManager {
+  [key: string]: OlMap;
+}
+
 // 管理多个地图实例
-const mapManager = {};
+const mapManager: MapManager = {};
 function createMap() {
   const mapLayer = new TileLayer({
     source: new XYZ({
@@ -40,4 +45,12 @@ export default function addMap(container: string, mapName: string) {
   map.setTarget(undefined);
   map.setTarget(container);
   return map;
+}
+
+export function getMap(mapName: string) {
+  if (mapManager[mapName]) {
+    return mapManager[mapName];
+  } else {
+    return null;
+  }
 }
