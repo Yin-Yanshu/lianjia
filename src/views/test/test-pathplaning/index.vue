@@ -10,7 +10,9 @@
   import VectorSource from 'ol/source/Vector';
   import { Style, Stroke, Icon } from 'ol/style';
   import initGaoDe from '../../../utils/gaode';
-  import addMap from '/@/store/modules/map';
+  import { useMapStore } from "/@/store/modules/map";
+
+  const mapStore = useMapStore();
 
   let arrowPoints: Feature<Geometry>[];
   let startPoint = ref([121.278768, 31.215104]);
@@ -319,7 +321,7 @@
 
   let map;
   onMounted(() => {
-    map = addMap('container', 'testPathPlaning');
+    map = mapStore.addMap('container', 'testPathPlaning');
     pathPlaningTest();
   });
 </script>

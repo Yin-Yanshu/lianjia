@@ -9,7 +9,9 @@
   import { Map } from 'ol';
   import { getDistance } from 'ol/sphere';
   import { onMounted, ref } from 'vue';
-  import { getMap } from '/@/store/modules/map';
+  import { useMapStore } from '/@/store/modules/map';
+
+  const mapStore = useMapStore();
 
   const props = defineProps({
     mapName: {
@@ -21,7 +23,7 @@
   const length = ref();
   onMounted(() => {
     setTimeout(() => {
-      const map = getMap(props.mapName);
+      const map = mapStore.getMap(props.mapName)
       if (map) {
         addLengthScale(map);
       }

@@ -7,9 +7,11 @@
 
 <script setup lang="ts">
   import { onMounted, ref } from 'vue';
-  import addMap from '/@/store/modules/map';
+  import { useMapStore } from '/@/store/modules/map';
   import { Map } from 'ol';
   import { useDynamicHeatmap } from './dynamicheatmap';
+
+  const mapStore = useMapStore();
 
   const calendarContainerRef = ref();
   const sliderContainerRef = ref();
@@ -19,7 +21,7 @@
   };
   let map: Map;
   onMounted(async () => {
-    map = addMap('container', 'testDynamicHeatmap');
+    map = mapStore.addMap('container', 'testDynamicHeatmap');
     const { addDynamicHeatMap, setCalenderContainer, setTimeSliderContainer } =
       useDynamicHeatmap(map);
 
