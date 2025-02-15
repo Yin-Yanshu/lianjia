@@ -33,10 +33,12 @@
   import HousePricePie from './components/HousePricePie.vue';
   import HouseTypePie from './components/HouseTypePie.vue';
   import { getCurrentHouseHeatMap, HeatMapTimeData } from '/@/api/point';
-  import addMap from '/@/store/modules/map';
+  import { useMapStore } from '/@/store/modules/map';
   import mapContainerWatch from '/@/utils/mapContainerWatch';
   import { addDynamicHeatMap } from '/@/utils/addDynamicHeatmap';
   import { RangePicker, Button } from 'ant-design-vue';
+
+  const mapStore = useMapStore();
 
   const loading = ref(true);
 
@@ -116,7 +118,7 @@
   // 获取全局唯一map
   let map;
   onMounted(() => {
-    map = addMap('map-container', 'analysis');
+    map = mapStore.addMap('map-container', 'analysis');
     // TODO 引用test-dynamicheatmap实现功能
     AddHeatMap(map, getCurrentHouseHeatMap);
     mapContainerWatch(map);

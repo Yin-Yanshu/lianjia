@@ -29,22 +29,18 @@
           @focus="inputBlurHandler"
         />
         <Button @click="activeButtonHandle(3)">规划</Button>
-        <Button @click="propertiesActiveButtonHandle(0)">方式</Button>
+        <Button @click="propertiesActiveButtonHandle(0)">户型</Button>
         <Button @click="propertiesActiveButtonHandle(1)">租金</Button>
         <Button @click="searchFilterHandle(0)">清空筛选</Button>
       </div>
       <div class="middle-item" v-if="propertyFromShow === 0">
         <Form class="middle-item-leaseform">
           <FormItem>
-            <CheckboxGroup v-model:value="lease_typeCheck">
-              <Checkbox :value="0">整租</Checkbox>
-              <Checkbox :value="1">合租</Checkbox>
-              <!-- <Checkbox
-                :checked="lease_typeCheck[0] === 1"
-                :value="1"
-                @change="handleCheckboxChange(1)"
-                >合租</Checkbox
-              > -->
+            <CheckboxGroup v-model:value="room_number">
+              <Checkbox :value="0">一室</Checkbox>
+              <Checkbox :value="1">两室</Checkbox>
+              <Checkbox :value="2">三室</Checkbox>
+              <Checkbox :value="3">四室+</Checkbox>
             </CheckboxGroup>
           </FormItem>
           <FormItem>
@@ -157,17 +153,13 @@
         </List>
       </div>
     </div>
-    <div class="down">
-      <img src="/resource/svg/line.svg" /><span>{{ length }}km</span
-      ><img src="/resource/svg/line.svg" />
-    </div>
+    <LengthScale mapName="bigscreem" />
   </div>
 </template>
 
 <script setup lang="ts">
   import { CaretDownOutlined } from '@ant-design/icons-vue';
   import {
-    Select as AntSelect,
     Button,
     Checkbox,
     CheckboxGroup,
@@ -178,6 +170,7 @@
     List,
     ListItem,
     ListItemMeta,
+    Select as AntSelect,
     SelectOption,
     Slider,
   } from 'ant-design-vue';
@@ -205,12 +198,15 @@
     getPlotsInCircle,
     getPlotsInPolygon,
     getPlotsInPolygonList,
-  } from '../../api/point';
+  } from '/@/api/point';
   import initGaoDe from '../../utils/gaode';
-  import addMap from '/@/store/modules/map';
+  import { useMapStore } from '/@/store/modules/map';
   import mapContainerWatch from '/@/utils/mapContainerWatch';
   import { EventsKey } from 'ol/events';
   import { useGlobSetting } from '/@/hooks/setting';
+  import LengthScale from '/@/views/bigscreem/components/LengthScale.vue';
+
+  const mapStore = useMapStore();
 
   const { staticUrl, geoserverUrl } = useGlobSetting();
 
@@ -310,7 +306,7 @@
   let propertyFromShow = ref(-1);
   // 过滤器选项
   let option: OptionData = {};
-  const lease_typeCheck = ref([]);
+  const room_number = ref([]);
   const priceSliderValue = ref<[number, number]>([2000, 5000]);
 
   /**
@@ -337,10 +333,15 @@
         break;
       // 确认增加 方式 过滤
       case 2:
-        if (lease_typeCheck.value[0] === 0) {
+        if (room_number.value[0] === 0) {
           option.lease_type = '整租';
-        } else if (lease_typeCheck.value[0] === 1) {
+        } else if (room_number.value[0] === 1) {
           option.lease_type = '合租';
+        }
+        if (room_number.value.length !== 0) {
+          option.room_number = room_number.value.map((item) => {
+            return item + 1;
+          }) as unknown as number[];
         }
         propertyFromShow.value = -1;
         break;
@@ -407,16 +408,19 @@
       listenerId?: string;
       listenerGroup?: string;
     }
+
     interface addListenerObjectI {
       listener: EventsKey;
       listenerId: string;
       listenerGroup?: string;
     }
+
     // subwayFunction: {
     //   '1001-subway': listener;,
     //   '1002-subway': '',
     // },
     const listenerManager = {};
+
     function addListener(listenerObject: addListenerObjectI | addListenerObjectI[]) {
       if (Array.isArray(listenerObject)) {
         listenerObject.forEach((item) => {
@@ -432,6 +436,7 @@
       }
       listenerManager[group][listenerId] = listener;
     }
+
     // 传入移出信息形况，
     // 1.单listenerId
     // 2.单listenerGroup
@@ -443,11 +448,13 @@
         console.log('listenerManager为空');
         return;
       }
+
       // 判断listenerGroup是否为空
       function isListenerGroupEmpty(listenerGroup: string) {
         const groupListeners = listenerManager[listenerGroup];
         return groupListeners && Object.keys(groupListeners).length !== 0 ? false : true;
       }
+
       // 判断listenerId是否为空
       function isListenerIdEmpty(listenerGroup: string, listenerId: string) {
         return listenerManager[listenerGroup][listenerId] === undefined;
@@ -504,6 +511,7 @@
         return;
       }
     }
+
     function removeListenerExcept(listenerInfo: removeListenerInfoI | removeListenerInfoI[]) {
       if (Array.isArray(listenerInfo)) {
         listenerInfo.forEach((item) => {
@@ -540,6 +548,7 @@
         return;
       }
     }
+
     function getListener(listenerId) {
       // 获取单个监听器 传入id定位监听器
       if (listenerId) {
@@ -553,6 +562,7 @@
         return false;
       }
     }
+
     return { addListener, removeListener, removeListenerExcept, getListener };
   }
 
@@ -1009,6 +1019,7 @@
   const houseCount = ref(0);
 
   const { addListener, removeListener, removeListenerExcept, getListener } = listenerManager();
+
   // INFO 地图层级查询
   function mapLevelSearch() {
     if (getListener('mapMoveEndListener')) return;
@@ -1203,6 +1214,7 @@
       }),
     });
   }
+
   // 为符合ts编译检查将overLayLayer图层style函数
   function changeOverLayStyle(feature, type = 'default') {
     const property = feature.getProperties();
@@ -1302,6 +1314,7 @@
   }
 
   const searchListShow = ref<boolean>(false);
+
   function inputBlurHandler() {
     searchListShow.value = searchListShow.value === false ? true : false;
   }
@@ -1322,6 +1335,7 @@
 
   // INFO 地名自动补全
   const placeInfoList = ref();
+
   function autoCompleteSearch(name) {
     autoCompletePromise.then((autoComplete) => {
       autoComplete.search(name, (_status, result) => {
@@ -1370,24 +1384,6 @@
 
   const length = ref();
 
-  function addLengthScaleTest(map: Map) {
-    let extent;
-    let startPoint;
-    let endPoint;
-    // 获取初始view地图长度
-    extent = map.getView().calculateExtent(map.getSize());
-    startPoint = [extent[0], extent[1]];
-    endPoint = [extent[2], extent[1]];
-    length.value = (getDistance(endPoint, startPoint) / 1000).toFixed(2);
-    // 监听zoom大小改变时地图长度
-    map.getView().on('change:resolution', () => {
-      extent = map.getView().calculateExtent(map.getSize());
-      startPoint = [extent[0], extent[1]];
-      endPoint = [extent[2], extent[1]];
-      length.value = (getDistance(endPoint, startPoint) / 1000).toFixed(2);
-    });
-  }
-
   // 路径规划部分
   const pathPlaningShow = ref<boolean>(false);
   const pathPlaningForm = reactive({
@@ -1412,9 +1408,11 @@
     }
   });
   const activeInput = ref(0);
+
   function activeInputHandler(index) {
     activeInput.value = index;
   }
+
   function pathPlaningListItemClickHandler(item) {
     if (activeInput.value === 0) return;
     if (activeInput.value === 1) {
@@ -1426,6 +1424,7 @@
       pathPlaningForm.endPlace = item.name;
     }
   }
+
   const subwayLineColors = {
     地铁1号线: 'rgb(234,11,42)',
     地铁2号线: 'rgb(148,212,11)',
@@ -1473,6 +1472,7 @@
   });
   // NOTE 缓存实例对象方法 缓存subway样式，减少重复new Style
   const plainingStyleCache = {};
+
   function getPlainingStyle(line) {
     if (plainingStyleCache[line]) {
       return plainingStyleCache[line];
@@ -1486,6 +1486,7 @@
     plainingStyleCache[line] = style;
     return style;
   }
+
   function planingUpperStyle(feature: Feature) {
     const transit_mode = feature.get('transit_mode');
     switch (transit_mode) {
@@ -1500,6 +1501,7 @@
         return defaultPathStyle;
     }
   }
+
   function planingDownStyle(feature) {
     const transit_mode = feature.get('transit_mode');
     switch (transit_mode) {
@@ -1507,6 +1509,7 @@
         return subwayWrapperStyle;
     }
   }
+
   function isPointOnLine(point: number[], lineStart: number[], lineEnd: number[]): boolean {
     const [xPoint, yPoint] = point;
     const [xStart, yStart] = lineStart;
@@ -1532,6 +1535,7 @@
 
     return Math.abs(isOnLine) < 1e-7;
   }
+
   let isPathPlaningSourceAdd = false;
   const pathPlaningSource = new VectorSource();
   const pathPlaningArrowSource = new VectorSource<Point>();
@@ -1565,7 +1569,7 @@
             rotation = dy > 0 ? rotation : Math.PI + rotation;
             returnStyle = new Style({
               image: new Icon({
-                src: 'public/resource/svg/path-arrow.svg',
+                src: '/resource/svg/path-arrow.svg',
                 imgSize: [200, 200],
                 scale: arrow_scale[transit_mode] || [0.1, 0.1],
                 rotation: rotation,
@@ -1577,30 +1581,31 @@
       return returnStyle;
     },
   });
+  // 内部使用image = new Image()创建的图片 image.src = '文件路径'加载图片,在开发环境使用public路径无法加载
   const startIcon = new Style({
     image: new Icon({
-      src: 'public/resource/svg/start-point.svg',
+      src: '/resource/svg/start-point.svg',
       imgSize: [200, 200],
       scale: [0.2, 0.2],
     }),
   });
   const endIcon = new Style({
     image: new Icon({
-      src: 'public/resource/svg/end-point.svg',
+      src: '/resource/svg/end-point.svg',
       imgSize: [200, 200],
       scale: [0.2, 0.2],
     }),
   });
   const busIcon = new Style({
     image: new Icon({
-      src: 'public/resource/svg/bus.svg',
+      src: '/resource/svg/bus.svg',
       imgSize: [200, 200],
       scale: [0.15, 0.15],
     }),
   });
   const subwayIcon = new Style({
     image: new Icon({
-      src: 'public/resource/svg/subway.svg',
+      src: '/resource/svg/subway.svg',
       imgSize: [200, 200],
       scale: [0.2, 0.2],
     }),
@@ -1637,6 +1642,7 @@
   // INFO 路径规划
   let lineFeatureList: Feature<LineString>[];
   const { pathPlaningPromise } = initGaoDe();
+
   /**
    * 输入起终地点名进行路径规划
    */
@@ -1733,7 +1739,9 @@
     };
     addListener(listenerParam);
   }
+
   let arrowPoints: Feature<Point>[];
+
   function calculateArrowPoints(lineFeatureList) {
     arrowPoints = [];
     lineFeatureList.forEach((lineFeature) => {
@@ -1752,6 +1760,7 @@
     pathPlaningArrowSource.clear();
     pathPlaningArrowSource.addFeatures(arrowPoints);
   }
+
   function pathPlaningHandle(index) {
     if (activeButton.value == index) {
       pathPlaningClear();
@@ -1762,6 +1771,7 @@
       activeButton.value = 3;
     }
   }
+
   function pathPlaningClear() {
     pathPlaningSource.clear();
     pathPlaningArrowSource.clear();
@@ -1813,9 +1823,8 @@
   // }
 
   onMounted(() => {
-    map = addMap('container', 'bigscreem');
+    map = mapStore.addMap('container', 'bigscreem');
     mapLevelSearch();
-    addLengthScaleTest(map);
     mapContainerWatch(map);
   });
 </script>
@@ -1887,6 +1896,7 @@
         padding: 20px;
         height: 100%;
       }
+
       .left-list-dropdown {
         border-bottom-left-radius: 10px;
         border-bottom-right-radius: 10px;
@@ -1894,6 +1904,7 @@
         display: block;
         animation: movein 1s;
       }
+
       .left-list-dropup {
         border-bottom-left-radius: 10px;
         border-bottom-right-radius: 10px;
@@ -1901,6 +1912,7 @@
         display: none;
         animation: moveout 1s;
       }
+
       /* 进入动画 */
       @keyframes movein {
         0% {
@@ -1944,25 +1956,9 @@
         padding: 20px;
         cursor: pointer;
       }
+
       .middle-item-searchlist :v-deep(.ant-list-item:hover) {
         background-color: #eeeeee;
-      }
-    }
-
-    .down {
-      position: absolute;
-      top: 96%;
-      width: 100%;
-      z-index: 999;
-      display: flex;
-      justify-content: center;
-
-      img {
-        width: 50%;
-      }
-
-      span {
-        font-size: 20px;
       }
     }
   }

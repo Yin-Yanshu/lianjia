@@ -100,7 +100,7 @@ export default defineComponent({
         <>
           <TypePicker
             menuTypeList={menuTypeList}
-            handler={(item: typeof menuTypeList[0]) => {
+            handler={(item: (typeof menuTypeList)[0]) => {
               baseHandler(HandlerEnum.CHANGE_LAYOUT, {
                 mode: item.mode,
                 type: item.type,
@@ -407,12 +407,6 @@ export default defineComponent({
         {unref(getShowDarkModeToggle) && <AppDarkModeToggle class="mx-auto" />}
         <Divider>{() => t('layout.setting.navMode')}</Divider>
         {renderSidebar()}
-        <Divider>{() => t('layout.setting.sysTheme')}</Divider>
-        {renderMainTheme()}
-        <Divider>{() => t('layout.setting.headerTheme')}</Divider>
-        {renderHeaderTheme()}
-        <Divider>{() => t('layout.setting.sidebarTheme')}</Divider>
-        {renderSiderTheme()}
         <Divider>{() => t('layout.setting.interfaceFunction')}</Divider>
         {renderFeatures()}
         <Divider>{() => t('layout.setting.interfaceDisplay')}</Divider>
