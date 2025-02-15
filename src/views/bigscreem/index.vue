@@ -200,11 +200,13 @@
     getPlotsInPolygonList,
   } from '/@/api/point';
   import initGaoDe from '../../utils/gaode';
-  import addMap from '/@/store/modules/map';
+  import { useMapStore } from '/@/store/modules/map';
   import mapContainerWatch from '/@/utils/mapContainerWatch';
   import { EventsKey } from 'ol/events';
   import { useGlobSetting } from '/@/hooks/setting';
   import LengthScale from '/@/views/bigscreem/components/LengthScale.vue';
+
+  const mapStore = useMapStore();
 
   const { staticUrl, geoserverUrl } = useGlobSetting();
 
@@ -1821,7 +1823,7 @@
   // }
 
   onMounted(() => {
-    map = addMap('container', 'bigscreem');
+    map = mapStore.addMap('container', 'bigscreem');
     mapLevelSearch();
     mapContainerWatch(map);
   });
