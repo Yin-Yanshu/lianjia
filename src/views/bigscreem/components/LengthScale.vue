@@ -21,13 +21,11 @@
   });
 
   const length = ref();
-  onMounted(() => {
-    setTimeout(() => {
-      const map = mapStore.getMap(props.mapName)
-      if (map) {
-        addLengthScale(map);
-      }
-    }, 1000);
+
+  let map;
+  onMounted(async () => {
+    map = await mapStore.getMap(props.mapName);
+    addLengthScale(map);
   });
 
   function addLengthScale(map: Map) {
