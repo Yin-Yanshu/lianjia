@@ -18,6 +18,9 @@ interface addListenerObjectI {
   listenerGroup?: string;
 }
 
+const mapManager: Record<string, Map> = {};
+const listenerManager: Record<string, any> = {};
+
 function createMap() {
   const mapLayer = new TileLayer({
     source: new XYZ({
@@ -41,32 +44,52 @@ function createMap() {
 
 export const useMapStore = defineStore({
   id: 'map',
-  state: () => ({
-    mapManager: {},
-    listenerManager: {},
-  }),
-  getters: {},
+  state: () => ({}),
+  getters: {
+    getAllListener(_state) {
+      return listenerManager;
+    },
+    getListenerNumber(state) {
+      return Object.keys(state).length;
+    },
+  },
   actions: {
     addMap(container: string, mapName: string) {
-      if (!this.mapManager[mapName]) {
+      if (!mapManager[mapName]) {
         const map = createMap();
         map.setTarget(container);
-        this.mapManager[mapName] = map;
-        return map;
+        mapManager[mapName] = map;
+        return mapManager[mapName];
       }
 
-      const map: Map = this.mapManager[mapName];
+      const map: Map = mapManager[mapName];
       map.setTarget(undefined);
       map.setTarget(container);
       return map;
     },
 
-    getMap(mapName: string) {
-      if (this.mapManager[mapName]) {
-        return this.mapManager[mapName];
-      } else {
-        return null;
-      }
+    async getMap(mapName: string) {
+      let retryCount = 0;
+
+      return new Promise<Map | null>((resolve, _reject) => {
+        const intervalId = setInterval(() => {
+          if (retryCount >= 10) {
+            clearInterval(intervalId);
+            resolve(null);
+            return;
+          }
+
+          retryCount++;
+          const map = mapManager[mapName];
+
+          if (map) {
+            clearInterval(intervalId);
+            resolve(map);
+          } else {
+            resolve(null);
+          }
+        }, 100);
+      });
     },
 
     // 判断图层是否已添加
@@ -89,10 +112,10 @@ export const useMapStore = defineStore({
 
       const { listener, listenerId, listenerGroup } = listenerObject;
       const group = listenerGroup || listenerId;
-      if (!this.listenerManager[group]) {
-        this.listenerManager[group] = {};
+      if (!listenerManager[group]) {
+        listenerManager[group] = {};
       }
-      this.listenerManager[group][listenerId] = listener;
+      listenerManager[group][listenerId] = listener;
     },
 
     // 传入移出信息形况，
@@ -102,46 +125,46 @@ export const useMapStore = defineStore({
     removeListener(listenerInfo: removeListenerInfoI) {
       const { listenerId, listenerGroup } = listenerInfo;
       // 判断listenerManager是否为空
-      if (Object.keys(this.listenerManager).length === 0) {
+      if (Object.keys(listenerManager).length === 0) {
         console.log('listenerManager已清空');
         return;
       }
 
       // 判断listenerGroup是否为空
       const isListenerGroupEmpty = (listenerGroup: string) => {
-        const groupListeners = this.listenerManager[listenerGroup];
+        const groupListeners = listenerManager[listenerGroup];
         return groupListeners && Object.keys(groupListeners).length !== 0 ? false : true;
       };
 
       // 判断listenerId是否为空
       const isListenerIdEmpty = (listenerGroup: string, listenerId: string) => {
-        return this.listenerManager[listenerGroup][listenerId] === undefined;
+        return listenerManager[listenerGroup][listenerId] === undefined;
       };
 
       // 移除所有监听器
       if (!listenerId && !listenerGroup) {
-        Object.keys(this.listenerManager).forEach((listenerGroup) => {
+        Object.keys(listenerManager).forEach((listenerGroup) => {
           if (isListenerGroupEmpty(listenerGroup)) return;
 
-          Object.keys(this.listenerManager[listenerGroup]).forEach((listenerId) => {
+          Object.keys(listenerManager[listenerGroup]).forEach((listenerId) => {
             if (!isListenerIdEmpty(listenerGroup, listenerId)) {
-              unByKey(this.listenerManager[listenerGroup][listenerId]);
+              unByKey(listenerManager[listenerGroup][listenerId]);
             }
           });
-          delete this.listenerManager[listenerGroup];
+          delete listenerManager[listenerGroup];
         });
         return;
       }
       // 移除单个监听器 传入id定位监听器
       if (listenerId && !listenerGroup) {
-        Object.keys(this.listenerManager).forEach((listenerGroup_) => {
+        Object.keys(listenerManager).forEach((listenerGroup_) => {
           // 判断listenerGroup是否为空
           if (isListenerGroupEmpty(listenerGroup_)) return;
 
-          Object.keys(this.listenerManager[listenerGroup_]).find((listenerId_) => {
+          Object.keys(listenerManager[listenerGroup_]).find((listenerId_) => {
             if (listenerId_ === listenerId && !isListenerIdEmpty(listenerGroup_, listenerId_)) {
-              unByKey(this.listenerManager[listenerGroup_][listenerId_]);
-              delete this.listenerManager[listenerGroup_][listenerId_];
+              unByKey(listenerManager[listenerGroup_][listenerId_]);
+              delete listenerManager[listenerGroup_][listenerId_];
             }
           });
         });
@@ -151,12 +174,12 @@ export const useMapStore = defineStore({
       if (!listenerId && listenerGroup) {
         if (isListenerGroupEmpty(listenerGroup)) return;
 
-        Object.keys(this.listenerManager[listenerGroup]).forEach((listenerId_) => {
+        Object.keys(listenerManager[listenerGroup]).forEach((listenerId_) => {
           if (!isListenerIdEmpty(listenerGroup, listenerId_)) {
-            unByKey(this.listenerManager[listenerGroup][listenerId_]);
+            unByKey(listenerManager[listenerGroup][listenerId_]);
           }
         });
-        delete this.listenerManager[listenerGroup];
+        delete listenerManager[listenerGroup];
         return;
       }
       // 移除单个监听器 传入group和id定位监听器
@@ -164,8 +187,8 @@ export const useMapStore = defineStore({
         if (isListenerGroupEmpty(listenerGroup)) return;
         if (isListenerIdEmpty(listenerGroup, listenerId)) return;
 
-        unByKey(this.listenerManager[listenerGroup][listenerId]);
-        delete this.listenerManager[listenerGroup][listenerId];
+        unByKey(listenerManager[listenerGroup][listenerId]);
+        delete listenerManager[listenerGroup][listenerId];
         return;
       }
     },
@@ -181,12 +204,12 @@ export const useMapStore = defineStore({
       const { listenerId, listenerGroup } = listenerInfo;
       // 移除除listenerId的所有监听器
       if (listenerId && !listenerGroup) {
-        Object.keys(this.listenerManager).forEach((listenerGroup) => {
-          Object.keys(this.listenerManager[listenerGroup]).forEach((listenerId_) => {
+        Object.keys(listenerManager).forEach((listenerGroup) => {
+          Object.keys(listenerManager[listenerGroup]).forEach((listenerId_) => {
             // 判断是否同id
             if (!(listenerId_ === listenerId)) {
-              unByKey(this.listenerManager[listenerGroup][listenerId_]);
-              delete this.listenerManager[listenerGroup][listenerId_];
+              unByKey(listenerManager[listenerGroup][listenerId_]);
+              delete listenerManager[listenerGroup][listenerId_];
             }
           });
         });
@@ -194,12 +217,12 @@ export const useMapStore = defineStore({
       }
       // 移除所有监听器except listenerGroup
       if (!listenerId && listenerGroup) {
-        Object.keys(this.listenerManager).forEach((listenerGroup_) => {
+        Object.keys(listenerManager).forEach((listenerGroup_) => {
           // 判断是否同group
           if (!(listenerGroup === listenerGroup_)) {
-            Object.keys(this.listenerManager[listenerGroup]).forEach((listenerId_) => {
-              unByKey(this.listenerManager[listenerGroup][listenerId_]);
-              delete this.listenerManager[listenerGroup][listenerId_];
+            Object.keys(listenerManager[listenerGroup]).forEach((listenerId_) => {
+              unByKey(listenerManager[listenerGroup][listenerId_]);
+              delete listenerManager[listenerGroup][listenerId_];
             });
           }
         });
@@ -210,8 +233,8 @@ export const useMapStore = defineStore({
     getListener(listenerId) {
       // 获取单个监听器 传入id定位监听器
       if (listenerId) {
-        Object.keys(this.listenerManager).forEach((listenerGroup) => {
-          Object.keys(this.listenerManager[listenerGroup]).find((listenerId_) => {
+        Object.keys(listenerManager).forEach((listenerGroup) => {
+          Object.keys(listenerManager[listenerGroup]).find((listenerId_) => {
             if (listenerId_ === listenerId) {
               return true;
             }
@@ -219,10 +242,6 @@ export const useMapStore = defineStore({
         });
         return false;
       }
-    },
-
-    getAllListener() {
-      return this.listenerManager;
     },
   },
 });
