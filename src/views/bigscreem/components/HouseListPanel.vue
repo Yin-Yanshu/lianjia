@@ -71,11 +71,14 @@
   });
 
   const _isListShow = ref(props.isListShow);
-  watch(props.houseList, (newValue) => {
-    if (newValue) {
-      _isListShow.value = true;
-    }
-  });
+  watch(
+    () => props.houseList,
+    (newValue) => {
+      if (newValue) {
+        _isListShow.value = true;
+      }
+    },
+  );
 
   function handleListItemClick(item) {
     map.getView().animate({
