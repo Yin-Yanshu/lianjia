@@ -22,18 +22,19 @@ const mapManager: Record<string, Map> = {};
 const listenerManager: Record<string, any> = {};
 
 function createMap() {
-  const mapLayer = new TileLayer({
-    source: new XYZ({
-      url: 'http://wprd0{1-4}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}',
-    }),
-  });
   return new Map({
     view: new View({
       center: [121.505891, 31.238039],
       projection: 'EPSG:4326',
       zoom: 13,
     }),
-    layers: [mapLayer],
+    layers: [
+      new TileLayer({
+        source: new XYZ({
+          url: 'http://wprd0{1-4}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&style=7&x={x}&y={y}&z={z}',
+        }),
+      }),
+    ],
     target: undefined,
     controls: [],
     interactions: defaults({
@@ -49,8 +50,8 @@ export const useMapStore = defineStore({
     getAllListener(_state) {
       return listenerManager;
     },
-    getListenerNumber(state) {
-      return Object.keys(state).length;
+    getListenerNumber(_state) {
+      return Object.keys(listenerManager).length;
     },
   },
   actions: {
