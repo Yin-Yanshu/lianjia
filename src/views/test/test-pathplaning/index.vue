@@ -3,14 +3,14 @@
 </template>
 
 <script setup lang="ts">
-  import { onMounted, ref } from 'vue';
+  import { onMounted, onUnmounted, ref } from 'vue';
   import { Feature } from 'ol';
   import { Geometry, LineString, Point } from 'ol/geom';
   import VectorLayer from 'ol/layer/Vector';
   import VectorSource from 'ol/source/Vector';
-  import { Style, Stroke, Icon } from 'ol/style';
+  import { Icon, Stroke, Style } from 'ol/style';
   import initGaoDe from '../../../utils/gaode';
-  import { useMapStore } from "/@/store/modules/map";
+  import { useMapStore } from '/@/store/modules/map';
 
   const mapStore = useMapStore();
 
@@ -64,6 +64,7 @@
   });
   // NOTE 缓存实例对象方法 缓存subway样式，减少重复new Style
   const plainingStyleCache = {};
+
   function getPlainingStyle(line) {
     if (plainingStyleCache[line]) {
       return plainingStyleCache[line];
@@ -77,6 +78,7 @@
     plainingStyleCache[line] = style;
     return style;
   }
+
   function planingUpperStyle(feature) {
     const transit_mode = feature.get('transit_mode');
     switch (transit_mode) {
@@ -91,6 +93,7 @@
         return defaultPathStyle;
     }
   }
+
   function planingDownStyle(feature) {
     const transit_mode = feature.get('transit_mode');
     switch (transit_mode) {
@@ -98,6 +101,7 @@
         return subwayWrapperStyle;
     }
   }
+
   function isPointOnLine(point: number[], lineStart: number[], lineEnd: number[]): boolean {
     const [xPoint, yPoint] = point;
     const [xStart, yStart] = lineStart;
@@ -123,6 +127,7 @@
 
     return Math.abs(isOnLine) < 1e-7;
   }
+
   let isPathPlaningSourceAdd = false;
   const pathPlaningSource = new VectorSource();
   const pathPlaningArrowSource = new VectorSource();
@@ -222,6 +227,7 @@
   });
   let lineFeatureList;
   const { pathPlaningPromise } = initGaoDe();
+
   function pathPlaningTest() {
     pathPlaningPromise.then((pathPlaning) => {
       pathPlaning.search(startPoint.value, endPoint.value, (_status, result) => {
@@ -300,6 +306,7 @@
       calculateArrowPoints(lineFeatureList);
     });
   }
+
   function calculateArrowPoints(lineFeatureList) {
     arrowPoints = [];
     lineFeatureList.forEach((lineFeature) => {
@@ -323,6 +330,13 @@
   onMounted(() => {
     map = mapStore.addMap('container', 'testPathPlaning');
     pathPlaningTest();
+  });
+
+  onUnmounted(() => {
+    map.removeLayer(pathPlaningDownLayer);
+    map.removeLayer(pathPlaningUpperLayer);
+    map.removeLayer(pathPlaningArrowLayer);
+    map.removeLayer(pathPlaningPopupLayer);
   });
 </script>
 
