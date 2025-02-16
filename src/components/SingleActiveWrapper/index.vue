@@ -1,11 +1,7 @@
 <template>
   <div class="single-wrapper-container">
     <div class="single-wrapper-button-container">
-      <div
-        class="active-button-container"
-        v-for="(componentInfo, index) in props.componentsInfo"
-        :key="componentInfo.name"
-      >
+      <div v-for="(componentInfo, index) in props.componentsInfo" :key="componentInfo.name">
         <a-button @click="changeActiveComponent(componentInfo.name, index)"
           >{{ componentInfo.name }}
         </a-button>
@@ -65,24 +61,27 @@
 </script>
 
 <style scoped lang="less">
-  .single-wrapper-button-container {
+  .single-wrapper-container {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    width: 100%;
+    min-width: 100px;
 
-    .active-button-container {
+    .single-wrapper-button-container {
       display: flex;
-      justify-content: center;
       align-items: center;
+      justify-content: space-between;
 
       .ant-btn {
         height: 40px;
         border-radius: 8px;
       }
     }
-  }
 
-  .single-wrapper-dynamic-components-container {
-    width: 100%;
+    .single-wrapper-dynamic-components-container {
+      width: 100%;
+    }
   }
 </style>

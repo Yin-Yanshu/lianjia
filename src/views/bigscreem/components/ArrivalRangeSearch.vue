@@ -1,5 +1,10 @@
 <template>
-  <div></div>
+  <div class="arrival-range-panel">
+    <div class="arrival-slider">
+      <span>通勤时间 </span>
+      <a-slider v-model:value="arriveTime" :min="10" :max="45" />
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -244,6 +249,8 @@
     // 清除所有监听函数
     mapStore.removeListener({});
     document.body.style.cursor = 'pointer';
+    // document.body.style.cursor = "url('/resource/img/pwa-192x192.png')";
+    // TODO 点击位置添加起始图标
     const arrivalSearchListener = map.on('click', (event) => {
       // 处理思路：判断获取到要素是否含有小区overlay要素，未找到则调用高德api
       let pixelCoordinate = map.getCoordinateFromPixel(event.pixel);
@@ -324,4 +331,9 @@
   });
 </script>
 
-<style scoped></style>
+<style scoped>
+  .arrival-range-panel {
+    background-color: rgb(255, 255, 255);
+    padding: 10px;
+  }
+</style>

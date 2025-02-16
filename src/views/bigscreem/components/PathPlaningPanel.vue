@@ -1,22 +1,13 @@
 <template>
-  <div
-    class="middle-item"
-    style="
-      display: flex;
-      flex-direction: column;
-      justify-content: space-around;
-      background-color: #fff;
-      padding: 20px;
-    "
-  >
-    <a-form :label-col="{ span: 4 }" :wrapper-col="{ span: 18 }">
+  <div class="path-planing-container">
+    <a-form :label-col="{ span: 4 }" :wrapper-col="{ span: 20 }">
       <a-form-item label="起点">
         <a-input v-model:value="pathPlaningForm.startPlace" @click="activeInputHandler(1)" />
       </a-form-item>
       <a-form-item label="终点">
         <a-input id="2" v-model:value="pathPlaningForm.endPlace" @click="activeInputHandler(2)" />
       </a-form-item>
-      <a-button @click="pathPlaning" style="margin-left: 7%">搜索</a-button>
+      <a-button class="path-planing-form-button" @click="pathPlaning">搜索</a-button>
     </a-form>
     <a-list
       class="middle-item-searchlist"
@@ -458,4 +449,16 @@
   });
 </script>
 
-<style scoped></style>
+<style scoped>
+  .path-planing-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    background-color: #fff;
+    padding: 10px;
+
+    .path-planing-form-button {
+      width: 100%;
+    }
+  }
+</style>

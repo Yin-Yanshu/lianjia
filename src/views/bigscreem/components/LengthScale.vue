@@ -1,5 +1,5 @@
 <template>
-  <div class="down">
+  <div class="length-scale-container">
     <img src="/resource/svg/line.svg" /><span>{{ length }}km</span
     ><img src="/resource/svg/line.svg" />
   </div>
@@ -48,11 +48,8 @@
 </script>
 
 <style scoped>
-  .down {
-    position: absolute;
-    bottom: 0;
+  .length-scale-container {
     width: 100%;
-    z-index: 999;
     display: flex;
     justify-content: center;
 

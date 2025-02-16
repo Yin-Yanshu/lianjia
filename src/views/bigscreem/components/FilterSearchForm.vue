@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="filter-search-panel-container">
     <Form class="middle-item-leaseform" v-if="filterOption === 'huxing'">
       <FormItem>
         <CheckboxGroup v-model:value="room_number">
@@ -68,4 +68,9 @@
   }
 </script>
 
-<style scoped></style>
+<style scoped>
+  .filter-search-panel-container {
+    padding: 10px;
+    background-color: rgb(255, 255, 255);
+  }
+</style>

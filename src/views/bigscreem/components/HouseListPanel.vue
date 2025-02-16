@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="house-list-panel">
     <div class="left-item left-list-title">
       <!--      <h4>可视区域内找到{{ houseCount }}套房子</h4>-->
       <CaretDownOutlined

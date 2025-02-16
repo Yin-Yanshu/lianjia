@@ -1,24 +1,22 @@
 <template>
-  <div>
+  <div class="place-search-panel">
     <a-input-search v-model:value="placeInfo.name" placeholder="搜索位置" @search="placeSearch" />
-    <div class="middle-item">
-      <a-list
-        class="middle-item-searchlist"
-        :data-source="placeInfoList"
-        item-layout="horizontal"
-        :pagination="pagination"
-      >
-        <template #renderItem="{ item }">
-          <a-list-item @click="[handleAutoCompleteListItemClick(item)]">
-            <a-list-item-meta>
-              <template #description>
-                <div>{{ item.name }}</div>
-              </template>
-            </a-list-item-meta>
-          </a-list-item>
-        </template>
-      </a-list>
-    </div>
+    <a-list
+      class="place-search-list"
+      :data-source="placeInfoList"
+      item-layout="horizontal"
+      :pagination="pagination"
+    >
+      <template #renderItem="{ item }">
+        <a-list-item @click="[handleAutoCompleteListItemClick(item)]">
+          <a-list-item-meta>
+            <template #description>
+              <div>{{ item.name }}</div>
+            </template>
+          </a-list-item-meta>
+        </a-list-item>
+      </template>
+    </a-list>
   </div>
 </template>
 
@@ -350,4 +348,9 @@
   });
 </script>
 
-<style scoped></style>
+<style scoped>
+  .place-search-panel {
+    padding: 10px;
+    background-color: rgb(255, 255, 255);
+  }
+</style>
