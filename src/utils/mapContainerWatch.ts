@@ -1,8 +1,33 @@
 import { Map } from 'ol';
-import { watch } from 'vue';
+import { isRef, onBeforeUnmount, Ref, watch } from 'vue';
 import { useAppStore } from '../store/modules/app';
 
 const appStore = useAppStore();
+
+export function useMapContainerObserver(map: Map, container: HTMLElement | Ref<HTMLElement>) {
+  let observer: ResizeObserver;
+  const mapContainerObserver = (map: Map, container: HTMLElement | Ref<HTMLElement>) => {
+    observer = new ResizeObserver((_entries) => {
+      map.updateSize();
+    });
+    if (isRef(container)) {
+      observer.observe(container.value);
+    } else {
+      observer.observe(container);
+    }
+  };
+
+  mapContainerObserver(map, container);
+  onBeforeUnmount(() => {
+    if (isRef(container)) {
+      observer.unobserve(container.value);
+      observer.disconnect();
+    } else {
+      observer.unobserve(container);
+      observer.disconnect();
+    }
+  });
+}
 
 function mapContainerWatch(map: Map) {
   watch(
@@ -15,12 +40,15 @@ function mapContainerWatch(map: Map) {
     { deep: true },
   );
 }
+
 function continueUpdateSize(map: Map, time = 400) {
   let animationId: number;
-  function updateSize() {
+
+  const updateSize = () => {
     map.updateSize();
     animationId = requestAnimationFrame(updateSize);
-  }
+  };
+
   updateSize();
   setTimeout(() => {
     cancelAnimationFrame(animationId);

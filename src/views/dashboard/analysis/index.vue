@@ -2,8 +2,8 @@
   <div class="container">
     <GrowCard :loading="loading" class="enter-y" />
     <div class="wrapper">
-      <div id="map-container">
-        <RangePicker
+      <div id="map-container" ref="mapContainer">
+        <a-rangePicker
           :value="hackValue || value"
           :disabled-date="disabledDate"
           @change="onChange"
@@ -11,12 +11,11 @@
           @calendarChange="onCalendarChange"
           class="time-picker"
         />
-        <Button class="time-picker-button" @click="buttonClick">查询</Button>
+        <a-button class="time-picker-button" @click="buttonClick">查询</a-button>
       </div>
       <div class="pie-container">
         <HouseTypePie />
         <HousePricePie />
-        <RangePicker @change="onChange" />
       </div>
     </div>
   </div>
@@ -34,9 +33,8 @@
   import HouseTypePie from './components/HouseTypePie.vue';
   import { getCurrentHouseHeatMap, HeatMapTimeData } from '/@/api/point';
   import { useMapStore } from '/@/store/modules/map';
-  import mapContainerWatch from '/@/utils/mapContainerWatch';
+  import { useMapContainerObserver } from '/@/utils/mapContainerWatch';
   import { addDynamicHeatMap } from '/@/utils/addDynamicHeatmap';
-  import { RangePicker, Button } from 'ant-design-vue';
 
   const mapStore = useMapStore();
 
@@ -70,6 +68,7 @@
       map.addLayer(heatMapLayer);
     }
   }
+
   function clearHeatMap() {
     heatMapSource.clear();
   }
@@ -117,11 +116,12 @@
   };
   // 获取全局唯一map
   let map;
+  const mapContainer = ref();
   onMounted(() => {
     map = mapStore.addMap('map-container', 'analysis');
     // TODO 引用test-dynamicheatmap实现功能
     AddHeatMap(map, getCurrentHouseHeatMap);
-    mapContainerWatch(map);
+    useMapContainerObserver(map, mapContainer);
   });
 
   setTimeout(() => {
@@ -148,6 +148,7 @@
       width: 67%;
       height: 100%;
       position: relative;
+
       .time-picker {
         width: 400px;
         height: 100px;
@@ -156,6 +157,7 @@
         right: 116px;
         z-index: 10;
       }
+
       .time-picker-button {
         width: 100px;
         position: absolute;
