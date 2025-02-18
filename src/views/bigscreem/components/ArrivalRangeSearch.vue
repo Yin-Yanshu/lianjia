@@ -3,6 +3,7 @@
     <div class="arrival-slider">
       <span>通勤时间 </span>
       <a-slider v-model:value="arriveTime" :min="10" :max="45" />
+      <!--      TODO 增加选择条件，如驾车 公交 骑行-->
     </div>
   </div>
 </template>
