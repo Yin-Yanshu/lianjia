@@ -37,6 +37,7 @@
   import VectorSource from 'ol/source/Vector';
   import VectorLayer from 'ol/layer/Vector';
   import { Map } from 'ol';
+  import { Group } from 'ol/layer';
   import { useMapStore } from '/@/store/modules/map';
 
   const mapStore = useMapStore();
@@ -312,6 +313,7 @@
       // return null;
     },
   });
+  let pathPlaningGroupLayer: Group;
 
   // INFO 路径规划
   let lineFeatureList: Feature<LineString>[];
@@ -381,10 +383,15 @@
           pathPlaningPopupSource.addFeatures(popupFeaturesArray);
 
           if (!mapStore.isLayerExist(map, pathPlaningDownLayer)) {
-            map.addLayer(pathPlaningDownLayer);
-            map.addLayer(pathPlaningUpperLayer);
-            map.addLayer(pathPlaningArrowLayer);
-            map.addLayer(pathPlaningPopupLayer);
+            pathPlaningGroupLayer = new Group({
+              layers: [
+                pathPlaningDownLayer,
+                pathPlaningUpperLayer,
+                pathPlaningArrowLayer,
+                pathPlaningPopupLayer,
+              ],
+            });
+            map.addLayer(pathPlaningGroupLayer);
           }
 
           map.getView().fit(pathPlaningArrowSource.getExtent(), {
@@ -431,20 +438,14 @@
   }
 
   function clearPathPlaning() {
-    pathPlaningSource.clear();
-    pathPlaningArrowSource.clear();
-    pathPlaningPopupSource.clear();
-    map.removeLayer(pathPlaningDownLayer);
-    map.removeLayer(pathPlaningUpperLayer);
-    map.removeLayer(pathPlaningArrowLayer);
-    map.removeLayer(pathPlaningPopupLayer);
+    pathPlaningGroupLayer.getLayers().forEach((layer) => {
+      layer.getSource().clear();
+    });
+    map.removeLayer(pathPlaningGroupLayer);
     mapStore.removeListener({ listenerGroup: 'pathPlaning' });
-
-    console.log('map.getLayers();', map.getLayers());
   }
 
   onBeforeUnmount(() => {
-    console.log('cccccccccccccc');
     clearPathPlaning();
   });
 </script>

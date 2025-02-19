@@ -26,6 +26,7 @@
   import VectorSource from 'ol/source/Vector';
   import { Point, Polygon } from 'ol/geom';
   import Feature from 'ol/Feature';
+  import { Group } from 'ol/layer';
 
   const mapStore = useMapStore();
 
@@ -41,12 +42,12 @@
   let map: Map;
 
   onMounted(async () => {
+    // TODO 还可以再优化加载逻辑，父组件传递Map实例isMap()接收对象，内部watch监听map，当map由undefined转为Map时返回对象并结束监听
     map = await mapStore.getMap(props.mapName);
     arrivalRangeSearch();
   });
 
   // 公交可达圈分析处理
-  let isDrawLayerAdd = false;
   const arriveTime = ref(20);
   const arriveOption = ref('SUBWAY,BUS');
   const drawVectorSource = new VectorSource();
@@ -62,6 +63,7 @@
       }),
     }),
   });
+  let arrivalRangeGroupLayer: Group;
 
   // 矢量图层绘制
   function VectorLayerDraw(polygon) {
@@ -74,10 +76,13 @@
       featureArray.push(feature);
     });
     drawVectorSource.addFeatures(featureArray);
-    if (!isDrawLayerAdd) {
-      // 限制图层叠加至最底层，index=0为高德切片地图
-      map.getLayers().insertAt(1, drawVectorLayer);
-      isDrawLayerAdd = true;
+
+    if (!mapStore.isLayerExist(map, overLayLayer)) {
+      // group可以组织特定图层组的图层叠加关系，限制drawVectorLayer在overLayLayer下方
+      arrivalRangeGroupLayer = new Group({
+        layers: [drawVectorLayer, overLayLayer],
+      });
+      map.addLayer(arrivalRangeGroupLayer);
     }
   }
 
@@ -136,10 +141,6 @@
 
     overLayLayer.getSource()!.clear();
     overLayLayer.getSource()!.addFeatures(overlayFeatureArray);
-
-    if (!mapStore.isLayerExist(map, overLayLayer)) {
-      map.addLayer(overLayLayer);
-    }
   }
 
   let currentOverlayPoint;
@@ -321,8 +322,10 @@
   }
 
   function arrivalRangeSearchClear() {
-    map.removeLayer(overLayLayer);
-    map.removeLayer(drawVectorLayer);
+    arrivalRangeGroupLayer.getLayers().forEach((layer) => {
+      layer.getSource().clear();
+    });
+    map.removeLayer(arrivalRangeGroupLayer);
     mapStore.removeListener({ listenerGroup: 'arrivalRangeSearch' });
     document.body.style.cursor = 'default';
   }
