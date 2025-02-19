@@ -6,6 +6,7 @@ import { unByKey } from 'ol/Observable';
 import TileLayer from 'ol/layer/Tile';
 import { XYZ } from 'ol/source';
 import { defaults } from 'ol/interaction';
+import { Group } from 'ol/layer';
 
 interface removeListenerInfoI {
   listenerId?: string;
@@ -96,6 +97,18 @@ export const useMapStore = defineStore({
     // 判断图层是否已添加
     isLayerExist(map: Map, layer: BaseLayer) {
       return map
+        .getLayers()
+        .getArray()
+        .some((_layer) => {
+          if (_layer['ol_uid'] === layer['ol_uid']) return true;
+          if (_layer instanceof Group) {
+            return this.isLayerInGroup(_layer, layer);
+          }
+          return false;
+        });
+    },
+    isLayerInGroup(layerGroup: Group, layer: BaseLayer) {
+      return layerGroup
         .getLayers()
         .getArray()
         .some((_layer) => {
