@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="subway-search-panel">
     <a-select v-model:value="activeLine" @change="subwaySelect">
       <a-select-option v-for="options in subwaylines" :key="options.label" :value="options.value"
         >{{ options.label }}
@@ -416,4 +416,8 @@
   });
 </script>
 
-<style scoped></style>
+<style scoped>
+  .subway-search-panel {
+    float: right;
+  }
+</style>
