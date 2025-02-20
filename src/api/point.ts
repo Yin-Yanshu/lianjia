@@ -4,6 +4,12 @@ export interface OptionData {
   price_min?: number;
   price_max?: number;
   lease_type?: string;
+  room_number?: number[];
+  direction?: string[];
+  pagination?: {
+    page: number;
+    page_size: number;
+  };
 }
 
 export interface PointData {
@@ -118,6 +124,16 @@ export const getHouseList = (data: OptionData) => {
 export const getVRHouse = (data) => {
   return defHttp.post({
     url: '/house/houseid',
+    data: {
+      ...data,
+    },
+  });
+};
+
+// TODO 从apiStore获取过滤条件，全局过滤，所有使用以上接口都会使用同一个过滤条件，减少每次调用接口时过滤操作
+export const getFilterHouseList = (data: OptionData) => {
+  return defHttp.post({
+    url: '/common/filter-house',
     data: {
       ...data,
     },
