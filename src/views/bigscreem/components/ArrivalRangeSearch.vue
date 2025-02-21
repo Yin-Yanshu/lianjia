@@ -40,10 +40,16 @@
   const emits = defineEmits(['arrivalRangeSearchResult']);
 
   let map: Map;
-
+  let arrivalRangeGroupLayer: Group;
   onMounted(async () => {
     // TODO 还可以再优化加载逻辑，父组件传递Map实例isMap()接收对象，内部watch监听map，当map由undefined转为Map时返回对象并结束监听
     map = await mapStore.getMap(props.mapName);
+
+    arrivalRangeGroupLayer = new Group({
+      layers: [drawVectorLayer, overLayLayer],
+    });
+    map.addLayer(arrivalRangeGroupLayer);
+
     arrivalRangeSearch();
   });
 
@@ -63,7 +69,6 @@
       }),
     }),
   });
-  let arrivalRangeGroupLayer: Group;
 
   // 矢量图层绘制
   function VectorLayerDraw(polygon) {
@@ -76,14 +81,6 @@
       featureArray.push(feature);
     });
     drawVectorSource.addFeatures(featureArray);
-
-    if (!mapStore.isLayerExist(map, overLayLayer)) {
-      // group可以组织特定图层组的图层叠加关系，限制drawVectorLayer在overLayLayer下方
-      arrivalRangeGroupLayer = new Group({
-        layers: [drawVectorLayer, overLayLayer],
-      });
-      map.addLayer(arrivalRangeGroupLayer);
-    }
   }
 
   // 使用canvas创建 text 文本中的内容，但不渲染至屏幕，仅用于计算text像素长度

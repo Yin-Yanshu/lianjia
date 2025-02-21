@@ -49,12 +49,6 @@
     },
   });
 
-  let map: Map;
-
-  onMounted(async () => {
-    map = await mapStore.getMap(props.mapName);
-  });
-
   const pathPlaningForm = reactive({
     startPlace: '',
     endPlace: '',
@@ -383,15 +377,6 @@
           pathPlaningPopupSource.addFeatures(popupFeaturesArray);
 
           if (!mapStore.isLayerExist(map, pathPlaningDownLayer)) {
-            pathPlaningGroupLayer = new Group({
-              layers: [
-                pathPlaningDownLayer,
-                pathPlaningUpperLayer,
-                pathPlaningArrowLayer,
-                pathPlaningPopupLayer,
-              ],
-            });
-            map.addLayer(pathPlaningGroupLayer);
           }
 
           map.getView().fit(pathPlaningArrowSource.getExtent(), {
@@ -438,12 +423,31 @@
   }
 
   function clearPathPlaning() {
-    pathPlaningGroupLayer.getLayers().forEach((layer) => {
-      layer.getSource().clear();
-    });
+    console.log('map.getAllLayers()Before;', pathPlaningGroupLayer);
+    pathPlaningGroupLayer
+      .getLayers()
+      .getArray()
+      .forEach((layer) => {
+        layer.getSource().clear();
+      });
     map.removeLayer(pathPlaningGroupLayer);
     mapStore.removeListener({ listenerGroup: 'pathPlaning' });
   }
+
+  let map: Map;
+
+  onMounted(async () => {
+    map = await mapStore.getMap(props.mapName);
+    pathPlaningGroupLayer = new Group({
+      layers: [
+        pathPlaningDownLayer,
+        pathPlaningUpperLayer,
+        pathPlaningArrowLayer,
+        pathPlaningPopupLayer,
+      ],
+    });
+    map.addLayer(pathPlaningGroupLayer);
+  });
 
   onBeforeUnmount(() => {
     clearPathPlaning();
