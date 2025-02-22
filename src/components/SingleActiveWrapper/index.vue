@@ -82,6 +82,7 @@
         border-radius: 8px;
       }
 
+      .ant-btn.active-button,
       .ant-btn.active-button:focus {
         color: #fff;
         background-color: rgb(9, 96, 189);
