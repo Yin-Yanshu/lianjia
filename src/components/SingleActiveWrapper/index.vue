@@ -2,7 +2,9 @@
   <div class="single-wrapper-container">
     <div class="single-wrapper-button-container">
       <div v-for="(componentInfo, index) in props.componentsInfo" :key="componentInfo.name">
-        <a-button @click="changeActiveComponent(componentInfo.name, index)"
+        <a-button
+          :class="{ 'active-button': index === buttonIndex }"
+          @click="changeActiveComponent(componentInfo.name, index)"
           >{{ componentInfo.name }}
         </a-button>
       </div>
@@ -39,7 +41,7 @@
 
   // 定义当前显示组件的索引，初始为 0
   const currentIndex = ref(0);
-  const buttonIndex = ref(0);
+  const buttonIndex = ref<number | undefined>(undefined);
   // 计算当前要显示的组件
   const currentComponentInfo = computed(() => props.componentsInfo[currentIndex.value]);
 
@@ -47,7 +49,8 @@
   const changeActiveComponent = (componentName: string, index: number) => {
     if (componentName === currentComponentInfo.value.name && index === buttonIndex.value) {
       isShouldDynamicComponent.value = !isShouldDynamicComponent.value;
-      buttonIndex.value = index;
+      currentIndex.value = 0;
+      buttonIndex.value = undefined;
       return;
     }
     isShouldDynamicComponent.value = true;
@@ -77,6 +80,16 @@
       .ant-btn {
         height: 40px;
         border-radius: 8px;
+      }
+
+      .ant-btn.active-button:focus {
+        color: #fff;
+        background-color: rgb(9, 96, 189);
+      }
+
+      :deep(.ant-btn:focus) {
+        color: inherit;
+        border-color: transparent;
       }
     }
 
