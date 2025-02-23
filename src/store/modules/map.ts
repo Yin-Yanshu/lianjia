@@ -7,6 +7,14 @@ import TileLayer from 'ol/layer/Tile';
 import { XYZ } from 'ol/source';
 import { defaults, Draw } from 'ol/interaction';
 import { Group } from 'ol/layer';
+import { Options } from 'ol/interaction/Draw';
+import VectorSource from 'ol/source/Vector';
+import { Fill, Stroke, Style } from 'ol/style';
+import { merge } from 'lodash-es';
+import { Geometry } from 'ol/geom';
+import VectorLayer from 'ol/layer/Vector';
+import { StyleLike } from 'ol/style/Style';
+import Feature from 'ol/Feature';
 
 interface removeListenerInfoI {
   listenerId?: string;
@@ -117,6 +125,75 @@ export const useMapStore = defineStore({
         .some((_layer) => {
           return _layer['ol_uid'] === layer['ol_uid'];
         });
+    },
+
+    getDrawGeometry(callback: Function, options?: Options) {
+      const defaultOptions: Options = {
+        source: new VectorSource(),
+        type: 'Polygon',
+        style: new Style({
+          fill: new Fill({
+            color: 'rgb(172,223,200,0.4)',
+          }),
+          stroke: new Stroke({
+            color: 'rgb(0,174,102,0.7)',
+            width: 2,
+          }),
+        }),
+      };
+      const mergedOptions = merge({}, defaultOptions, options);
+      const graphicDraw: Draw = new Draw(mergedOptions);
+      currentMap.addInteraction(graphicDraw);
+
+      graphicDraw.on('drawend', (event) => {
+        const geometry = event.feature.getGeometry();
+
+        callback(geometry);
+      });
+
+      return graphicDraw;
+    },
+
+    updateVectorLayerByFeature(layer: VectorLayer<VectorSource>, options) {
+      const { inputData, processFunction, style } = options;
+      const overlayFeatureArray = processFunction(inputData);
+      layer.getSource()!.clear();
+      layer.getSource()!.addFeatures(overlayFeatureArray);
+      if (style) {
+        layer.setStyle(style);
+      }
+    },
+
+    changeSelectFeatureStyle(
+      layer: VectorLayer<VectorSource>,
+      changeStyle: StyleLike,
+      callback?: (clickedFeature: Feature) => any,
+    ) {
+      let currentFeature: Feature<Geometry> | null;
+      const defaultStyle = layer.getStyle();
+
+      return currentMap.on('click', async (event) => {
+        const featureList = await layer.getFeatures(event.pixel);
+
+        // 未获取要feature  恢复旧feature样式
+        if (!featureList.length && currentFeature) {
+          currentFeature.setStyle(defaultStyle as StyleLike);
+          currentFeature = null;
+          return;
+        }
+        // 获取到feature 恢复旧feature样式
+        if (currentFeature) {
+          currentFeature.setStyle(defaultStyle as StyleLike);
+        }
+
+        // 更新当前选中feature样式
+        featureList[0].setStyle(changeStyle);
+        currentFeature = featureList[0];
+
+        if (callback) {
+          callback(featureList[0] as Feature);
+        }
+      });
     },
 
     addListener(listenerObject: addListenerObjectI | addListenerObjectI[]) {
