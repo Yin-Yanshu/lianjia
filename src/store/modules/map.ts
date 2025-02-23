@@ -5,7 +5,7 @@ import BaseLayer from 'ol/layer/Base';
 import { unByKey } from 'ol/Observable';
 import TileLayer from 'ol/layer/Tile';
 import { XYZ } from 'ol/source';
-import { defaults } from 'ol/interaction';
+import { defaults, Draw } from 'ol/interaction';
 import { Group } from 'ol/layer';
 
 interface removeListenerInfoI {
@@ -14,13 +14,14 @@ interface removeListenerInfoI {
 }
 
 interface addListenerObjectI {
-  listener: EventsKey;
+  listener: EventsKey | Draw;
   listenerId: string;
   listenerGroup?: string;
 }
 
 const mapManager: Record<string, Map> = {};
 const listenerManager: Record<string, any> = {};
+let currentMap: Map;
 
 function createMap() {
   return new Map({
@@ -67,6 +68,7 @@ export const useMapStore = defineStore({
       const map: Map = mapManager[mapName];
       map.setTarget(undefined);
       map.setTarget(container);
+      currentMap = map;
       return map;
     },
 
@@ -86,6 +88,7 @@ export const useMapStore = defineStore({
 
           if (map) {
             clearInterval(intervalId);
+            currentMap = map;
             resolve(map);
           } else {
             resolve(null);
@@ -162,7 +165,14 @@ export const useMapStore = defineStore({
 
           Object.keys(listenerManager[listenerGroup]).forEach((listenerId) => {
             if (!isListenerIdEmpty(listenerGroup, listenerId)) {
-              unByKey(listenerManager[listenerGroup][listenerId]);
+              // map监听EventKey
+              if (typeof listenerManager[listenerGroup][listenerId]['type'] === 'string') {
+                unByKey(listenerManager[listenerGroup][listenerId]);
+              }
+              // Draw等控件
+              if (typeof listenerManager[listenerGroup][listenerId]['type_'] === 'string') {
+                currentMap.removeInteraction(listenerManager[listenerGroup][listenerId]);
+              }
             }
           });
           delete listenerManager[listenerGroup];
@@ -177,7 +187,14 @@ export const useMapStore = defineStore({
 
           Object.keys(listenerManager[listenerGroup_]).find((listenerId_) => {
             if (listenerId_ === listenerId && !isListenerIdEmpty(listenerGroup_, listenerId_)) {
-              unByKey(listenerManager[listenerGroup_][listenerId_]);
+              // map监听EventKey
+              if (typeof listenerManager[listenerGroup_][listenerId_]['type'] === 'string') {
+                unByKey(listenerManager[listenerGroup_][listenerId_]);
+              }
+              // Draw等控件
+              if (typeof listenerManager[listenerGroup_][listenerId_]['type_'] === 'string') {
+                currentMap.removeInteraction(listenerManager[listenerGroup_][listenerId_]);
+              }
               delete listenerManager[listenerGroup_][listenerId_];
             }
           });
@@ -190,7 +207,14 @@ export const useMapStore = defineStore({
 
         Object.keys(listenerManager[listenerGroup]).forEach((listenerId_) => {
           if (!isListenerIdEmpty(listenerGroup, listenerId_)) {
-            unByKey(listenerManager[listenerGroup][listenerId_]);
+            // map监听EventKey
+            if (typeof listenerManager[listenerGroup][listenerId_]['type'] === 'string') {
+              unByKey(listenerManager[listenerGroup][listenerId_]);
+            }
+            // Draw等控件
+            if (typeof listenerManager[listenerGroup][listenerId_]['type_'] === 'string') {
+              currentMap.removeInteraction(listenerManager[listenerGroup][listenerId_]);
+            }
           }
         });
         delete listenerManager[listenerGroup];
@@ -201,7 +225,15 @@ export const useMapStore = defineStore({
         if (isListenerGroupEmpty(listenerGroup)) return;
         if (isListenerIdEmpty(listenerGroup, listenerId)) return;
 
-        unByKey(listenerManager[listenerGroup][listenerId]);
+        // map监听EventKey
+        if (typeof listenerManager[listenerGroup][listenerId]['type'] === 'string') {
+          unByKey(listenerManager[listenerGroup][listenerId]);
+        }
+        // Draw等控件
+        if (typeof listenerManager[listenerGroup][listenerId]['type_'] === 'string') {
+          currentMap.removeInteraction(listenerManager[listenerGroup][listenerId]);
+        }
+
         delete listenerManager[listenerGroup][listenerId];
         return;
       }
@@ -222,7 +254,14 @@ export const useMapStore = defineStore({
           Object.keys(listenerManager[listenerGroup]).forEach((listenerId_) => {
             // 判断是否同id
             if (!(listenerId_ === listenerId)) {
-              unByKey(listenerManager[listenerGroup][listenerId_]);
+              // map监听EventKey
+              if (typeof listenerManager[listenerGroup][listenerId_]['type'] === 'string') {
+                unByKey(listenerManager[listenerGroup][listenerId_]);
+              }
+              // Draw等控件
+              if (typeof listenerManager[listenerGroup][listenerId_]['type_'] === 'string') {
+                currentMap.removeInteraction(listenerManager[listenerGroup][listenerId_]);
+              }
               delete listenerManager[listenerGroup][listenerId_];
             }
           });
