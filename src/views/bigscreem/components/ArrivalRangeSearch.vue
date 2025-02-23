@@ -304,18 +304,18 @@
         );
       });
     });
-    const clickPlotListener = getHouseByClickPlot(map);
-    const param1 = {
-      listener: clickPlotListener,
-      listenerId: 'clickPlotListener-arrivalRangeSearch',
-      listenerGroup: 'arrivalRangeSearch',
-    };
+    // const clickPlotListener = getHouseByClickPlot(map);
+    // const param1 = {
+    //   listener: clickPlotListener,
+    //   listenerId: 'clickPlotListener-arrivalRangeSearch',
+    //   listenerGroup: 'arrivalRangeSearch',
+    // };
     const param2 = {
       listener: arrivalSearchListener,
       listenerId: 'arrivalSearchListener',
       listenerGroup: 'arrivalRangeSearch',
     };
-    mapStore.addListener([param1, param2]);
+    mapStore.addListener([param2]);
   }
 
   function arrivalRangeSearchClear() {

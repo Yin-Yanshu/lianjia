@@ -98,8 +98,8 @@ export const useMapStore = defineStore({
     },
 
     // 判断图层是否已添加
-    isLayerExist(map: Map, layer: BaseLayer) {
-      return map
+    isLayerExist(layer: BaseLayer) {
+      return currentMap
         .getLayers()
         .getArray()
         .some((_layer) => {

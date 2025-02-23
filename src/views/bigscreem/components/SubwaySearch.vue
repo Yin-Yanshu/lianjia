@@ -137,7 +137,7 @@
     let url = subwaylines[activeLine.value].url;
     subwayVectorSource.setUrl(url);
     subwayVectorSource.refresh();
-    if (!mapStore.isLayerExist(map, subwayVectorLayer)) {
+    if (!mapStore.isLayerExist(subwayVectorLayer)) {
       map.addLayer(subwayVectorLayer);
     }
     if (!isFirstCall) {
@@ -212,7 +212,7 @@
     overLayLayer.getSource()!.clear();
     overLayLayer.getSource()!.addFeatures(overlayFeatureArray);
 
-    if (!mapStore.isLayerExist(map, overLayLayer)) {
+    if (!mapStore.isLayerExist(overLayLayer)) {
       map.addLayer(overLayLayer);
     }
   }

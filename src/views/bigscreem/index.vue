@@ -526,7 +526,7 @@
     overLaySource.addFeatures(overlayFeatureArray);
     overLayLayer.setSource(overLaySource);
 
-    if (!mapStore.isLayerExist(map, overLayLayer)) {
+    if (!mapStore.isLayerExist(overLayLayer)) {
       map.addLayer(overLayLayer);
     }
   }
@@ -542,6 +542,8 @@
     }
   });
 
+  // useMapLevelSearch();
+  // useRegionHover();
   // const searchResult = useMapLevelSearch();
   // houseList.value = searchResult.value;
   const refMapContainer = ref();

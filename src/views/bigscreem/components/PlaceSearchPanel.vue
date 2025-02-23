@@ -152,7 +152,7 @@
     overLayLayer.getSource()!.clear();
     overLayLayer.getSource()!.addFeatures(overlayFeatureArray);
 
-    if (!mapStore.isLayerExist(map, overLayLayer)) {
+    if (!mapStore.isLayerExist(overLayLayer)) {
       map.addLayer(overLayLayer);
     }
   }
