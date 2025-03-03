@@ -11,12 +11,14 @@
     </div>
 
     <div class="single-wrapper-dynamic-components-container">
-      <component
-        v-if="isShouldDynamicComponent"
-        :is="currentComponentInfo.component"
-        v-bind="currentComponentInfo.props || {}"
-        v-on="currentComponentInfo.listeners || {}"
-      />
+      <Transition name="slide" mode="out-in">
+        <component
+          v-if="isShouldDynamicComponent"
+          :is="currentComponentInfo.component"
+          v-bind="currentComponentInfo.props || {}"
+          v-on="currentComponentInfo.listeners || {}"
+        />
+      </Transition>
     </div>
   </div>
 </template>
@@ -92,6 +94,22 @@
         color: inherit;
         border-color: transparent;
       }
+    }
+
+    .slide-enter-active,
+    .slide-leave-active {
+      overflow: hidden;
+      transition: max-height 1s ease-out;
+    }
+
+    .slide-enter-from,
+    .slide-leave-to {
+      max-height: 0;
+    }
+
+    .slide-enter-to,
+    .slide-leave-from {
+      max-height: 100vh;
     }
 
     .single-wrapper-dynamic-components-container {
