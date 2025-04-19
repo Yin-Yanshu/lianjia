@@ -1,12 +1,22 @@
 <template>
   <div class="path-planing-container">
-    <a-form :label-col="{ span: 4 }" :wrapper-col="{ span: 20 }">
+    <a-form
+      ref="formRef"
+      :model="pathPlaningForm"
+      :label-col="{ span: 4 }"
+      :wrapper-col="{ span: 20 }"
+      :rules="rules"
+    >
       <a-form-item label="起点">
         <a-input v-model:value="pathPlaningForm.startPlace" @click="activeInputHandler(1)" />
       </a-form-item>
       <a-form-item label="终点">
         <a-input id="2" v-model:value="pathPlaningForm.endPlace" @click="activeInputHandler(2)" />
       </a-form-item>
+      <a-radio-group v-model:value="planingType" style="margin-bottom: 24px; margin-left: 20px">
+        <a-radio-button value="BUS">公交</a-radio-button>
+        <!-- <a-radio-button value="DRIVING">驾车</a-radio-button> -->
+      </a-radio-group>
       <a-button class="path-planing-form-button" @click="pathPlaning">搜索</a-button>
     </a-form>
     <a-list
@@ -57,7 +67,7 @@
     pageSize: 4,
   };
 
-  const { autoCompletePromise, pathPlaningPromise } = initGaoDe();
+  const { autoCompletePromise, pathPlaningPromise, pathPlaningDrivingPromise } = initGaoDe();
 
   const placeInfoList = ref();
 
@@ -140,6 +150,12 @@
       width: 24,
     }),
   });
+  const drivingStyle = new Style({
+    stroke: new Stroke({
+      color: 'rgb(0,160,232)',
+      width: 20,
+    }),
+  });
   // NOTE 缓存实例对象方法 缓存subway样式，减少重复new Style
   const planingStyleCache = {};
 
@@ -167,6 +183,8 @@
         return getPlaningStyle(line);
       case 'BUS':
         return busStyle;
+      case 'DRIVING':
+        return drivingStyle;
       default:
         return defaultPathStyle;
     }
@@ -312,80 +330,166 @@
   // INFO 路径规划
   let lineFeatureList: Feature<LineString>[];
 
+  // TODO 表单添加校验规则，拒绝空值查询
+  const rules = {
+    startPlace: [
+      { required: true, message: '请输入起点', trigger: 'blur' },
+      { min: 1, message: '请输入起点', trigger: 'blur' },
+    ],
+    endPlace: [
+      { required: true, min: 3, message: '请输入终点', trigger: 'change' },
+      { min: 1, max: 10, message: '请输入终点', trigger: 'blur' },
+    ],
+  };
+  const formRef = ref();
+
+  const planingType = ref('BUS');
+
   /**
    * 输入起终地点名进行路径规划
    */
   function pathPlaning() {
     mapStore.removeListener({});
-    pathPlaningPromise.then((pathPlaning) => {
-      pathPlaning.search(
-        [{ keyword: pathPlaningForm.startPlace }, { keyword: pathPlaningForm.endPlace }],
-        (_status, result) => {
-          const popupFeaturesArray: Feature[] = [];
-          const startFeature = new Feature({
-            geometry: new Point([result.start.location.lng, result.start.location.lat]),
-          });
-          const endFeature = new Feature({
-            geometry: new Point([result.end.location.lng, result.end.location.lat]),
-          });
-          startFeature.set('popupType', 'start');
-          endFeature.set('popupType', 'end');
-          popupFeaturesArray.push(startFeature, endFeature);
-
-          lineFeatureList = result.plans[0].segments.map((segment) => {
-            // 构建交通类型图标
-            let segmentStartFeature;
-            if (segment.transit.origin) {
-              segmentStartFeature = new Feature({
-                geometry: new Point([segment.transit.origin.lng, segment.transit.origin.lat]),
+    if (planingType.value === 'BUS') {
+      formRef.value.validate().then(() => {
+        pathPlaningPromise.then((pathPlaning) => {
+          pathPlaning.search(
+            [{ keyword: pathPlaningForm.startPlace }, { keyword: pathPlaningForm.endPlace }],
+            (_status, result) => {
+              const popupFeaturesArray: Feature[] = [];
+              const startFeature = new Feature({
+                geometry: new Point([result.start.location.lng, result.start.location.lat]),
               });
-            }
-            if (segment.transit.on_station) {
-              segmentStartFeature = new Feature({
-                geometry: new Point([
-                  segment.transit.on_station.location.lng,
-                  segment.transit.on_station.location.lat,
-                ]),
+              const endFeature = new Feature({
+                geometry: new Point([result.end.location.lng, result.end.location.lat]),
               });
-            }
-            segmentStartFeature.set('popupType', 'transit');
-            segmentStartFeature.set('transit_mode', segment.transit_mode);
-            popupFeaturesArray.push(segmentStartFeature);
+              startFeature.set('popupType', 'start');
+              endFeature.set('popupType', 'end');
+              popupFeaturesArray.push(startFeature, endFeature);
 
-            // 构建线路feature信息
-            const segmentLine = segment.transit.path.map((element) => {
-              return [element.lng, element.lat];
-            });
-            const segmentLineFeature = new Feature({
-              geometry: new LineString(segmentLine),
-            });
-            const instruction = segment.instruction;
-            // 匹配描述信息中地铁线路信息
-            let match = instruction.match(/地铁\d+号线/);
-            if (match) segmentLineFeature.set('line', match[0]);
-            segmentLineFeature.set('transit_mode', segment.transit_mode);
+              lineFeatureList = result.plans[0].segments.map((segment) => {
+                // 构建交通类型图标
+                let segmentStartFeature;
+                if (segment.transit.origin) {
+                  segmentStartFeature = new Feature({
+                    geometry: new Point([segment.transit.origin.lng, segment.transit.origin.lat]),
+                  });
+                }
+                if (segment.transit.on_station) {
+                  segmentStartFeature = new Feature({
+                    geometry: new Point([
+                      segment.transit.on_station.location.lng,
+                      segment.transit.on_station.location.lat,
+                    ]),
+                  });
+                }
+                segmentStartFeature.set('popupType', 'transit');
+                segmentStartFeature.set('transit_mode', segment.transit_mode);
+                popupFeaturesArray.push(segmentStartFeature);
 
-            return segmentLineFeature;
-          });
+                // 构建线路feature信息
+                const segmentLine = segment.transit.path.map((element) => {
+                  return [element.lng, element.lat];
+                });
+                const segmentLineFeature = new Feature({
+                  geometry: new LineString(segmentLine),
+                });
+                const instruction = segment.instruction;
+                // 匹配描述信息中地铁线路信息
+                let match = instruction.match(/地铁\d+号线/);
+                if (match) segmentLineFeature.set('line', match[0]);
+                segmentLineFeature.set('transit_mode', segment.transit_mode);
 
-          // 计算箭头数量
-          calculateArrowPoints(lineFeatureList);
+                return segmentLineFeature;
+              });
 
-          pathPlaningSource.clear();
-          pathPlaningSource.addFeatures(lineFeatureList);
-          pathPlaningPopupSource.clear();
-          pathPlaningPopupSource.addFeatures(popupFeaturesArray);
+              // 计算箭头数量
+              calculateArrowPoints(lineFeatureList);
 
-          if (!mapStore.isLayerExist(map, pathPlaningDownLayer)) {
-          }
+              pathPlaningSource.clear();
+              pathPlaningSource.addFeatures(lineFeatureList);
+              pathPlaningPopupSource.clear();
+              pathPlaningPopupSource.addFeatures(popupFeaturesArray);
 
-          map.getView().fit(pathPlaningArrowSource.getExtent(), {
-            padding: [100, 100, 100, 100],
-            duration: 1000,
-          });
-        },
-      );
-    });
+              map.getView().fit(pathPlaningArrowSource.getExtent(), {
+                padding: [100, 100, 100, 100],
+                duration: 1000,
+              });
+            },
+          );
+        });
+      });
+    }
+    if (planingType.value === 'DRIVING') {
+      formRef.value.validate().then(() => {
+        pathPlaningDrivingPromise.then((pathPlaning) => {
+          pathPlaning.search(
+            [{ keyword: pathPlaningForm.startPlace }, { keyword: pathPlaningForm.endPlace }],
+            (_status, result) => {
+              const popupFeaturesArray: Feature[] = [];
+              const startFeature = new Feature({
+                geometry: new Point([result.start.location.lng, result.start.location.lat]),
+              });
+              const endFeature = new Feature({
+                geometry: new Point([result.end.location.lng, result.end.location.lat]),
+              });
+              startFeature.set('popupType', 'start');
+              endFeature.set('popupType', 'end');
+              popupFeaturesArray.push(startFeature, endFeature);
+
+              lineFeatureList = result.plans[0].segments.map((segment) => {
+                // 构建交通类型图标
+                let segmentStartFeature;
+                if (segment.transit.origin) {
+                  segmentStartFeature = new Feature({
+                    geometry: new Point([segment.transit.origin.lng, segment.transit.origin.lat]),
+                  });
+                }
+                if (segment.transit.on_station) {
+                  segmentStartFeature = new Feature({
+                    geometry: new Point([
+                      segment.transit.on_station.location.lng,
+                      segment.transit.on_station.location.lat,
+                    ]),
+                  });
+                }
+                segmentStartFeature.set('popupType', 'transit');
+                segmentStartFeature.set('transit_mode', segment.transit_mode);
+                popupFeaturesArray.push(segmentStartFeature);
+
+                // 构建线路feature信息
+                const segmentLine = segment.transit.path.map((element) => {
+                  return [element.lng, element.lat];
+                });
+                const segmentLineFeature = new Feature({
+                  geometry: new LineString(segmentLine),
+                });
+                const instruction = segment.instruction;
+                // 匹配描述信息中地铁线路信息
+                let match = instruction.match(/地铁\d+号线/);
+                if (match) segmentLineFeature.set('line', match[0]);
+                segmentLineFeature.set('transit_mode', segment.transit_mode);
+
+                return segmentLineFeature;
+              });
+
+              // 计算箭头数量
+              calculateArrowPoints(lineFeatureList);
+
+              pathPlaningSource.clear();
+              pathPlaningSource.addFeatures(lineFeatureList);
+              pathPlaningPopupSource.clear();
+              pathPlaningPopupSource.addFeatures(popupFeaturesArray);
+
+              map.getView().fit(pathPlaningArrowSource.getExtent(), {
+                padding: [100, 100, 100, 100],
+                duration: 1000,
+              });
+            },
+          );
+        });
+      });
+    }
 
     // 更新比例尺时更新箭头数量和指向
     mapStore.removeListenerExcept({ listenerId: 'pathPlaningListener' });

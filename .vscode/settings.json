@@ -141,7 +141,7 @@
   ],
   "explorer.fileNesting.enabled": true,
   "explorer.fileNesting.patterns": {
-    "vite.config.ts": "*.json, *.config.js, *.config.ts, *.config.mjs, README*, .env*, CHANGELOG*, LICENSE*, .*ignore, *gitpod.yml, .eslint*, .yarnclean"
+    "package.json": "*.json, *.config.js, *.config.ts, *.config.mjs, README*, .env*, CHANGELOG*, LICENSE*, .*ignore, *gitpod.yml, .eslint*, yarn.lock, .yarnclean, Dockerfile"
   }
   // "editor.acceptSuggestionOnCommitCharacter": false
 }

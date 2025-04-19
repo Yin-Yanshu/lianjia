@@ -1,4 +1,4 @@
-import AMapLoader from '@amap/amap-jsapi-loader';
+import AMapLoader from "@amap/amap-jsapi-loader";
 
 // @ts-ignore
 window._AMapSecurityConfig = {
@@ -7,7 +7,13 @@ window._AMapSecurityConfig = {
 const AMap = await AMapLoader.load({
   key: '2eabe002d0eabc32258472ea7320e36e',
   version: '1.4.15',
-  plugins: ['AMap.ArrivalRange', 'AMap.Autocomplete', 'AMap.PlaceSearch', 'AMap.Transfer'],
+  plugins: [
+    'AMap.ArrivalRange',
+    'AMap.Autocomplete',
+    'AMap.PlaceSearch',
+    'AMap.Transfer',
+    'AMap.Driving',
+  ],
 });
 
 // 可达性分析接口
@@ -31,8 +37,19 @@ const transOptions = {
   panel: 'panel',
   policy: AMap.TransferPolicy.LEAST_TIME,
 };
+
 async function initPathPlaning() {
   return await new AMap.Transfer(transOptions);
+}
+
+const drivingTransOptions = {
+  city: '上海市',
+  panel: 'panel',
+  policy: AMap.TransferPolicy.LEAST_TIME,
+};
+
+async function initPathPlaningDriving() {
+  return await new AMap.Driving(drivingTransOptions);
 }
 
 /**
@@ -42,6 +59,7 @@ const arrivalRangePromise = initArrivalRange();
 const autoCompletePromise = initAutoComplete();
 const PlaceSearchPromise = initPlaceSearch();
 const pathPlaningPromise = initPathPlaning();
+const pathPlaningDrivingPromise = initPathPlaningDriving();
 
 export default function initGaoDe() {
   return {
@@ -49,5 +67,6 @@ export default function initGaoDe() {
     autoCompletePromise,
     PlaceSearchPromise,
     pathPlaningPromise,
+    pathPlaningDrivingPromise,
   };
 }

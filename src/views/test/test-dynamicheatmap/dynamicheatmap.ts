@@ -5,7 +5,9 @@ import Heatmap from 'ol/layer/Heatmap';
 import VectorSource from 'ol/source/Vector';
 import { getDynamicHouseHeatMap, HeatMapTimeData } from '/@/api/point';
 import { unByKey } from 'ol/Observable';
-import { RangePicker } from 'ant-design-vue';
+// TODO 生产环境RangePicker无法构建好像是缺了哪个包
+// import { RangePicker } from 'ant-design-vue';
+import { DatePicker } from 'ant-design-vue';
 import { createVNode, render, ref } from 'vue';
 import { Moment } from 'moment/moment';
 import TimeSlider from './components/timeslider.vue';
@@ -562,7 +564,7 @@ export function useDynamicHeatmap(map: Map) {
       // addDynamicHeatMap(params);
     };
 
-    const vnode = createVNode(RangePicker, {
+    const vnode = createVNode(DatePicker, {
       class: 'time-picker',
       style: {
         width: '100%',

@@ -35,6 +35,7 @@
   let map: Map;
   onMounted(async () => {
     map = await mapStore.getMap(props.mapName);
+    map.addLayer(overLayLayer);
     polygonSearch();
   });
 
@@ -98,7 +99,7 @@
     overLayLayer.getSource()!.clear();
     overLayLayer.getSource()!.addFeatures(overlayFeatureArray);
 
-    if (!mapStore.isLayerExist(map, overLayLayer)) {
+    if (!mapStore.isLayerExist(overLayLayer)) {
       map.addLayer(overLayLayer);
     }
   }
@@ -279,12 +280,10 @@
   }
 
   function polygonSearchClear() {
-    console.log('map.getAllLayers()Before;', map.getAllLayers());
     map.removeInteraction(polygonDraw);
     map.removeLayer(overLayLayer);
     mapStore.removeListener({ listenerGroup: 'polygonSearch' });
     document.body.style.cursor = 'default';
-    console.log('map.getAllLayers();', map.getAllLayers());
   }
 
   onBeforeUnmount(() => {

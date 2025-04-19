@@ -7,15 +7,12 @@ import { PageEnum } from '/@/enums/pageEnum';
 import { ROLES_KEY, TOKEN_KEY, USER_INFO_KEY } from '/@/enums/cacheEnum';
 import { getAuthCache, setAuthCache } from '/@/utils/auth';
 import { GetUserInfoModel, LoginParams } from '/@/api/sys/model/userModel';
-import { doLogout, getUserInfo, loginApi } from '/@/api/sys/user';
-import { useI18n } from '/@/hooks/web/useI18n';
-import { useMessage } from '/@/hooks/web/useMessage';
+import { getUserInfo } from '/@/api/sys/user';
 import { router } from '/@/router';
 import { usePermissionStore } from '/@/store/modules/permission';
 import { RouteRecordRaw } from 'vue-router';
 import { PAGE_NOT_FOUND_ROUTE } from '/@/router/routes/basic';
 import { isArray } from '/@/utils/is';
-import { h } from 'vue';
 
 interface UserState {
   userInfo: Nullable<UserInfo>;
@@ -88,24 +85,32 @@ export const useUserStore = defineStore({
         mode?: ErrorMessageMode;
       },
     ): Promise<GetUserInfoModel | null> {
-      try {
+      // try {
+      //   const { goHome = true, mode, ...loginParams } = params;
+      //   // const data = await loginApi(loginParams, mode);
+      //   // const { token } = data;
+      //   const token = 'faketoken';
+
+      //   // save token
+      //   this.setToken(token);
+      //   return this.afterLoginAction(goHome);
+      // } catch (error) {
+      //   return Promise.reject(error);
+      // }
+      setTimeout(() => {
         const { goHome = true, mode, ...loginParams } = params;
-        // const data = await loginApi(loginParams, mode);
-        // const { token } = data;
         const token = 'faketoken';
 
         // save token
         this.setToken(token);
         return this.afterLoginAction(goHome);
-      } catch (error) {
-        return Promise.reject(error);
-      }
+      }, 500);
     },
     async afterLoginAction(goHome?: boolean): Promise<GetUserInfoModel | null> {
       if (!this.getToken) return null;
       // get user info
       // const userInfo = await this.getUserInfoAction();
-      const userInfo = {
+      const userInfo: GetUserInfoModel = {
         roles: [
           {
             roleName: 'Super Admin',
@@ -114,9 +119,9 @@ export const useUserStore = defineStore({
         ],
         userId: '1',
         username: 'vben',
-        token: 'fakeToken1',
-        realName: 'YYS',
+        realName: 'SZH',
         desc: 'manager',
+        avatar: '',
       };
 
       const sessionTimeout = this.sessionTimeout;

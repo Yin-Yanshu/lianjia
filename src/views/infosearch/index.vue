@@ -2,7 +2,7 @@
   <div>
     <div class="filter-container">
       <div class="filter-option">
-        <span>类型 </span>
+        <span class="filter-option-label">类型 </span>
         <a-radio-group v-model:value="filterParam.lease_type">
           <a-radio-button value="0">不限</a-radio-button>
           <a-radio-button value="1">整租</a-radio-button>
@@ -10,7 +10,7 @@
         </a-radio-group>
       </div>
       <div class="filter-option">
-        <span>租金 </span>
+        <span class="filter-option-label">租金 </span>
         <a-radio-group v-model:value="filterParam.price_max">
           <a-radio-button value="0">不限</a-radio-button>
           <a-radio-button value="1">1000元以下</a-radio-button>
@@ -21,7 +21,7 @@
         </a-radio-group>
       </div>
       <div class="filter-option">
-        <span>朝向 </span>
+        <span class="filter-option-label">朝向 </span>
         <a-radio-group v-model:value="filterParam.direction">
           <a-radio-button value="0">不限</a-radio-button>
           <a-radio-button value="东">东</a-radio-button>
@@ -31,7 +31,7 @@
         </a-radio-group>
       </div>
       <div class="filter-option">
-        <span>户型 </span>
+        <span class="filter-option-label">户型 </span>
         <a-radio-group v-model:value="filterParam.room_number">
           <a-radio-button value="0">不限</a-radio-button>
           <a-radio-button value="1">一居室</a-radio-button>
@@ -45,7 +45,12 @@
     <FlexWrap style="margin: 2vh">
       <div v-for="(item, index) in houseList" :key="index" style="width: 24%">
         <a-card hoverable style="border-radius: 1vh">
-          <img style="margin-bottom: 15px" src="/resource/img/lianjia_logo.png" alt="图片缺失" />
+          <img
+            style="margin-bottom: 15px; width: 300px; height: 280px; object-fit: cover"
+            :src="staticUrl + item.overview_path"
+            @click="onImageClick(item)"
+            @error="onImageLoadError"
+          />
           <a-card-meta :title="item.title">
             <template #description>
               <div>{{ item.house_type }}</div>
@@ -65,6 +70,13 @@
   import { Tag } from 'ant-design-vue';
   import { onMounted, reactive, ref, watch } from 'vue';
   import FlexWrap from '/src/components/FlexWrapper/index.vue';
+  import { RouteRecordRaw, useRouter } from 'vue-router';
+  import { useGlobSetting } from '/@/hooks/setting';
+  import { LAYOUT } from '/@/router/constant';
+
+  const { staticUrl } = useGlobSetting();
+
+  const router = useRouter();
 
   const filterParam = reactive({
     lease_type: '0',
@@ -97,6 +109,9 @@
     build_type: string;
     house_type: string;
     area: string;
+    overview_path: string;
+    wgs84_lat: string;
+    wgs84_lng: string;
   }
 
   // TODO 继续功能开发
@@ -120,6 +135,19 @@
 
   const currentPage = ref(1);
 
+  function onImageClick(_houseInfo) {
+    router.replace({
+      name: 'InfoDetail',
+      query: {
+        houseId: '5db641bb-833a-4bca-b7cc-e2f7df18925b',
+      },
+    });
+  }
+
+  function onImageLoadError(event) {
+    event.target.src = '/resource/img/lianjia_logo.png';
+  }
+
   async function onPageChange() {
     const param: OptionData = {
       lease_type: filterParam.lease_type,
@@ -136,8 +164,34 @@
     houseList.value = [...response.data.houseList];
   }
 
+  // const { data, refresh } = useTable(getHouseListInfo);
   onMounted(() => {
     getHouseListInfo();
+    const route = {
+      path: '/infodetail',
+      name: 'InfoDetail',
+      component: LAYOUT,
+      redirect: '/infodetail/index',
+      meta: {
+        hideChildrenInMenu: true,
+        icon: 'ant-design:fund-outlined',
+        title: '360看房',
+        orderNo: 100000,
+      },
+      children: [
+        {
+          path: 'index',
+          name: 'InfoDetailPage',
+          component: () => import('/src/views/infosearch/components/InfoDetail.vue'),
+          meta: {
+            title: '详细面板',
+            icon: 'simple-icons:about-dot-me',
+            hideMenu: true,
+          },
+        },
+      ],
+    };
+    router.addRoute(route as unknown as RouteRecordRaw);
   });
 </script>
 
@@ -146,26 +200,19 @@
     background-color: #fff;
     margin: 2vh;
     border-radius: 10px;
+    padding: 1vw;
 
     .filter-option {
       display: flex;
       align-items: flex-start;
-      height: 100%; /* 确保容器有高度 */
+      height: 100%;
       padding: 10px;
 
-      span {
+      .filter-option-label {
         margin-right: 20px;
+        font-size: 18px;
+        font-weight: bold;
       }
-    }
-  }
-
-  .search-list {
-    width: 40%;
-    background-color: #fff;
-    margin: 0 auto;
-
-    ::v-deep(.ant-list-item-extra, .ant-list-item-main) {
-      margin: 20px;
     }
   }
 </style>
